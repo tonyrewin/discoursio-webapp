@@ -4,17 +4,7 @@ import { clsx } from 'clsx'
 
 import styles from './Button.module.scss'
 
-export type ButtonVariant =
-  | 'primary'
-  | 'primary-disabled'
-  | 'secondary'
-  | 'secondary-disabled'
-  | 'bordered'
-  | 'outline'
-  | 'primary-square'
-  | 'secondary-square'
-  | 'disabled'
-  | 'loading'
+export type ButtonVariant = 'primary' | 'secondary' | 'primary-square' | 'secondary-square' | 'subscribeButton' | 'unsubscribeButton'
 type Props = {
   title?: string
   value: string | JSX.Element
@@ -72,9 +62,8 @@ export const Button = (props: Props) => {
         styles[(props.variant ?? 'primary') as keyof typeof styles],
         {
           [styles.disabled]: props.disabled,
-          [styles.loadingDots]: isLoading
-
-          // [styles.subscribeButton]: props.isSubscribeButton
+          [styles['loadingDots']]: isLoading,
+          [styles.subscribeButton]: props.isSubscribeButton
         },
         props.class
       )}
