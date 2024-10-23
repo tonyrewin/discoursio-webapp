@@ -1,12 +1,11 @@
-import { RouteSectionProps, useSearchParams } from '@solidjs/router'
+import { RouteDefinition, RouteSectionProps, useSearchParams } from '@solidjs/router'
 import { createEffect, createMemo } from 'solid-js'
 
-import { Client } from '@urql/core'
 import { AUTHORS_PER_PAGE } from '~/components/Views/AllAuthorsView'
 import { FeedProps, FeedView } from '~/components/Views/FeedView'
 import { LoadMoreItems, LoadMoreWrapper } from '~/components/_shared/LoadMoreWrapper'
 import { PageLayout } from '~/components/_shared/PageLayout'
-import { useFeed } from '~/context/feed'
+import { SHOUTS_PER_PAGE, useFeed } from '~/context/feed'
 import { useLocalize } from '~/context/localize'
 import { ReactionsProvider } from '~/context/reactions'
 import { useSession } from '~/context/session'
@@ -17,15 +16,39 @@ import {
   loadFollowedShouts,
   loadUnratedShouts
 } from '~/graphql/api/private'
+
+import { loadShouts } from '~/graphql/api/public'
+import { loadTopics } from '~/graphql/api/public'
 import { LoadShoutsOptions, Shout, Topic } from '~/graphql/schema/core.gen'
 import { FromPeriod, getFromDate } from '~/lib/fromPeriod'
 
-const feeds = {
+const privateFeeds = {
   followed: loadFollowedShouts,
   discussed: loadDiscussedShouts,
   coauthored: loadCoauthoredShouts,
   unrated: loadUnratedShouts
 }
+
+const publicFeeds = {
+  recent: loadShouts,
+  featured: ({ offset, limit }: LoadShoutsOptions) =>
+    loadShouts({ limit, offset, filters: { featured: true } }),
+  hot: ({ offset, limit }: LoadShoutsOptions) => loadShouts({ limit, offset, order_by: 'last_comment_at' })
+}
+
+const fetchTopics = async () => {
+  const topicsFetcher = loadTopics()
+  return await topicsFetcher()
+}
+
+export const route = {
+  load: async () => {
+    return {
+      topics: await fetchTopics(),
+      shouts: await loadShouts({ limit: SHOUTS_PER_PAGE })
+    }
+  }
+} satisfies RouteDefinition
 
 export type FeedSearchParams = { period?: FromPeriod }
 
@@ -35,16 +58,16 @@ export default (props: RouteSectionProps<{ shouts: Shout[]; topics: Topic[] }>) 
   const { setFeed, feed } = useFeed()
   const { client } = useSession()
 
-  // preload all topics
+  // preloaded all topics
   const { addTopics, sortedTopics } = useTopics()
   createEffect(() => {
     !sortedTopics() && props.data.topics && addTopics(props.data.topics)
   })
 
-  // /feed/:mode:
-  const mode = createMemo(() => props.params.mode || 'recent')
+  // /feed/:mode: all | featured | followed | discussed | coauthored | unrated
+  const mode = createMemo(() => props.params.mode || 'all')
 
-  // /feed/:mode/:order
+  // /feed/:mode/:order: recent | hot | likes
   const order = createMemo(() => {
     return (
       (['recent', 'hot', 'likes'].includes(props.params.order)
@@ -57,8 +80,6 @@ export default (props: RouteSectionProps<{ shouts: Shout[]; topics: Topic[] }>) 
 
   // load more my feed
   const loadMoreMyFeed = async (offset?: number) => {
-    const gqlHandler = feeds[mode() as keyof typeof feeds]
-
     // /feed/:mode:/:order: - select order setting
     const options: LoadShoutsOptions = {
       limit: 20,
@@ -74,7 +95,12 @@ export default (props: RouteSectionProps<{ shouts: Shout[]; topics: Topic[] }>) 
     if (!client()) {
       throw new Error('API client not connected')
     }
-    const shoutsLoader = gqlHandler(client() as Client, options)
+
+    const shoutsLoader =
+      mode() in privateFeeds
+        ? privateFeeds[mode() as keyof typeof privateFeeds](client(), options)
+        : publicFeeds[mode() as keyof typeof publicFeeds](options)
+
     const loaded = await shoutsLoader()
     loaded && setFeed((prev: Shout[]) => [...prev, ...loaded] as Shout[])
     return loaded as LoadMoreItems

@@ -131,10 +131,10 @@ export const FeedView = (props: FeedProps) => {
                     'view-switcher__item--selected': !props.order || props.order === 'recent'
                   })}
                 >
-                  <A href={'/feed/recent'}>{t('Recent')}</A>
+                  <A href={`/feed/${props.mode}/recent`}>{t('Recent')}</A>
                 </li>
                 <li class={clsx({ 'view-switcher__item--selected': props.order === 'likes' })}>
-                  <A class="link" href={'/feed/likes'}>
+                  <A class="link" href={`/feed/${props.mode}/likes`}>
                     {t('Liked')}
                   </A>
                 </li>
@@ -143,7 +143,7 @@ export const FeedView = (props: FeedProps) => {
                     'view-switcher__item--selected': props.order === 'hot'
                   })}
                 >
-                  <A class="link" href={'/feed/hot'}>
+                  <A class="link" href={`/feed/${props.mode}/hot`}>
                     {t('Commented')}
                   </A>
                 </li>
