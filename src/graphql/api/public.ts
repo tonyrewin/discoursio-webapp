@@ -9,6 +9,7 @@ import loadAuthorsByQuery from '~/graphql/query/core/authors-load-by'
 import loadReactionsByQuery from '~/graphql/query/core/reactions-load-by'
 import loadFollowersByTopicQuery from '~/graphql/query/core/topic-followers'
 import loadTopicsQuery from '~/graphql/query/core/topics-all'
+import loadShoutsUnratedQuery from '~/graphql/query/core/articles-load-unrated'
 import {
   Author,
   LoadShoutsOptions,
@@ -17,6 +18,7 @@ import {
   QueryLoad_Authors_ByArgs,
   QueryLoad_Reactions_ByArgs,
   QueryLoad_Shouts_SearchArgs,
+  QueryLoad_Shouts_UnratedArgs,
   Reaction,
   Shout,
   Topic
@@ -113,4 +115,15 @@ export const loadFollowersByTopic = (slug: string) => {
     const result = resp?.data?.get_topic_followers
     if (result) return result as Author[]
   }, `topic-${slug}`)
+}
+
+export const loadUnratedShouts = (
+  options: QueryLoad_Shouts_UnratedArgs
+) => {
+  const page = `${options.offset || 0}-${(options?.limit || 0) + (options.offset || 0)}`
+  return cache(async () => {
+    const resp = await defaultClient.query(loadShoutsUnratedQuery, { ...options }).toPromise()
+    const result = resp?.data?.load_shouts_unrated
+    if (result) return result as Shout[]
+  }, `shouts-unrated-${page}`)
 }

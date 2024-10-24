@@ -80,6 +80,8 @@ export default (props: RouteSectionProps<{ shouts: Shout[]; topics: Topic[] }>) 
 
   // load more my feed
   const loadMoreMyFeed = async (offset?: number) => {
+    console.debug(`[routes.feed] load more ${mode()} feed by ${order()}`)
+
     // /feed/:mode:/:order: - select order setting
     const options: LoadShoutsOptions = {
       limit: 20,
@@ -97,11 +99,11 @@ export default (props: RouteSectionProps<{ shouts: Shout[]; topics: Topic[] }>) 
     }
 
     const shoutsLoader =
-      mode() in privateFeeds
-        ? privateFeeds[mode() as keyof typeof privateFeeds](client(), options)
-        : publicFeeds[mode() as keyof typeof publicFeeds](options)
+      Object.keys(privateFeeds).includes(mode()) && client()
+        ? privateFeeds[mode() as keyof typeof privateFeeds]?.(client(), options)
+        : publicFeeds[mode() as keyof typeof publicFeeds]?.(options)
 
-    const loaded = await shoutsLoader()
+    const loaded = await shoutsLoader?.()
     loaded && setFeed((prev: Shout[]) => [...prev, ...loaded] as Shout[])
     return loaded as LoadMoreItems
   }
@@ -115,11 +117,7 @@ export default (props: RouteSectionProps<{ shouts: Shout[]; topics: Topic[] }>) 
     >
       <LoadMoreWrapper loadFunction={loadMoreMyFeed} pageSize={AUTHORS_PER_PAGE}>
         <ReactionsProvider>
-          <FeedView
-            shouts={feed() || []}
-            mode={(mode() || 'all') as FeedProps['mode']}
-            order={order() as FeedProps['order']}
-          />
+          <FeedView mode={(mode() || 'all') as FeedProps['mode']} order={order() as FeedProps['order']} />
         </ReactionsProvider>
       </LoadMoreWrapper>
     </PageLayout>

@@ -1,8 +1,8 @@
-import { A, createAsync, useLocation, useNavigate, useSearchParams } from '@solidjs/router'
+import { A, createAsync, useLocation, useNavigate } from '@solidjs/router'
 import { clsx } from 'clsx'
 import { For, Show, createEffect, createSignal, on } from 'solid-js'
 import { DropDown } from '~/components/_shared/DropDown'
-import { Option } from '~/components/_shared/DropDown/DropDown'
+import { Option, OptionGroup } from '~/components/_shared/DropDown/DropDown'
 import { Icon } from '~/components/_shared/Icon'
 import { InviteMembers } from '~/components/_shared/InviteMembers'
 import { Loading } from '~/components/_shared/Loading'
@@ -13,10 +13,10 @@ import { useReactions } from '~/context/reactions'
 import { useSession } from '~/context/session'
 import { useTopics } from '~/context/topics'
 import { useUI } from '~/context/ui'
-import { loadUnratedShouts } from '~/graphql/api/private'
-import type { Author, Reaction, Shout } from '~/graphql/schema/core.gen'
+import { loadUnratedShouts } from '~/graphql/api/public'
+import type { Author, Shout } from '~/graphql/schema/core.gen'
 import { ReactionKind } from '~/graphql/schema/core.gen'
-import { byCreated } from '~/utils/sort'
+import { capitalize } from '~/utils/capitalize'
 import { CommentDate } from '../Article/CommentDate'
 import { getShareUrl } from '../Article/SharePopup'
 import { AuthorBadge } from '../Author/AuthorBadge'
@@ -25,22 +25,25 @@ import { ArticleCard } from '../Feed/ArticleCard'
 import { Placeholder } from '../Feed/Placeholder'
 import { Sidebar } from '../Feed/Sidebar'
 import { Modal } from '../_shared/Modal'
+import { EXPO_LAYOUTS, useFeed } from '~/context/feed'
 
 import styles from '~/styles/views/Feed.module.scss'
 import stylesBeside from '../Feed/Beside.module.scss'
 import stylesTopic from '../Feed/CardTopic.module.scss'
+import { ExpoLayoutType } from '~/types/common'
+import { loadShouts } from '~/graphql/api/public'
 
 export const FEED_PAGE_SIZE = 20
-export type FeedMode = 'followed' | 'discussed' | 'coauthored' | 'unrated' | 'featured' | 'all'
+export type FeedMode = 'featured' | 'not featured'| 'all'
 export type ShoutsOrder = 'recent' | 'likes' | 'hot'
-export type PeriodType = 'day' | 'week' | 'month' | 'year'
+export type PeriodType = 'all time' | 'day' | 'week' | 'month' | 'year'
 export type FeedProps = {
-  shouts: Shout[]
   mode?: FeedMode
   order?: ShoutsOrder
 }
 
 const PERIODS = {
+  'all time': 0,
   day: 24 * 60 * 60,
   week: 7 * 24 * 60 * 60,
   month: 30 * 24 * 60 * 60,
@@ -50,38 +53,54 @@ const PERIODS = {
 export const FeedView = (props: FeedProps) => {
   const { t } = useLocalize()
   const loc = useLocation()
-  const { client, session } = useSession()
-
-  const unrated = createAsync(async () => {
-    if (client()) {
-      const shoutsLoader = loadUnratedShouts(client(), { limit: 5 })
-      return await shoutsLoader()
-    }
-  })
   const navigate = useNavigate()
   const { showModal } = useUI()
-  const [isLoading, setIsLoading] = createSignal(false)
-  const [isRightColumnLoaded, setIsRightColumnLoaded] = createSignal(false)
   const { loadReactionsBy } = useReactions()
   const { topTopics } = useTopics()
   const { topAuthors } = useAuthors()
-  const [topComments, setTopComments] = createSignal<Reaction[]>([])
-  const [searchParams, changeSearchParams] = useSearchParams<{ period: PeriodType }>()
-  const loadRecentComments = async () => {
-    const comments = await loadReactionsBy({ by: { kinds: [ReactionKind.Comment] }, limit: 50 })
-    setTopComments(comments.sort(byCreated).reverse())
-  }
+  const { client, session } = useSession()
 
-  // post-load
+  const unrated = createAsync(async () => await loadUnratedShouts({ limit: 5 }))
+  const recentComments = createAsync(
+    async () => await loadReactionsBy({ by: { kinds: [ReactionKind.Comment] }, limit: 10 })
+  )
+
+  // context-wise feed
+  const { feed, addFeed } = useFeed()
+
+  // filters
+  const [mode, setMode] = createSignal<FeedMode>(props.mode || 'all')
+  const [layoutFilter, setLayoutFilter] = createSignal<ExpoLayoutType | 'article' | undefined>()
+  const [currentPeriod, setCurrentPeriod] = createSignal<number | undefined>()
+  // loading state
+  const [isLoading, setIsLoading] = createSignal(false)
+  const [isRightColumnLoaded, setIsRightColumnLoaded] = createSignal(false)
+  const [shareData, setShareData] = createSignal<Shout | undefined>()
+
+  // 1 filter changes quering observer
+  createEffect(on(
+    [mode, layoutFilter, currentPeriod], 
+    ([m, layout, after]) => {
+      setIsLoading(true)
+      const filters: { layout?: ExpoLayoutType | 'article', after?: number, featured?: boolean } = { layout, after }
+      if (m !== 'all') filters.featured = m === 'featured'
+      console.debug('[views.feed] filter changed', filters)
+      const shoutsLoader = loadShouts({ filters, limit: FEED_PAGE_SIZE })
+      shoutsLoader().then(addFeed)
+    },
+    { defer: true }
+  ))
+
+  // 2 post-load reactions
   createEffect(
     on(
-      () => props.shouts,
+      feed, // here should be a current feed
       (sss?: Shout[]) => {
         if (sss && Array.isArray(sss)) {
           setIsLoading(true)
           Promise.all([
-            loadRecentComments(),
-            loadReactionsBy({ by: { shouts: sss.map((s: Shout) => s.slug) } })
+            loadReactionsBy({ by: { kinds: [ReactionKind.Comment] }, limit: 10 }), // comments on all shouts
+            loadReactionsBy({ by: { shouts: sss.map((s: Shout) => s.slug) } }) // reactions on feed shouts
           ]).finally(() => {
             console.debug('[views.feed] finally loaded reactions, data loading finished')
             setIsRightColumnLoaded(true)
@@ -93,23 +112,30 @@ export const FeedView = (props: FeedProps) => {
     )
   )
 
-  const [shareData, setShareData] = createSignal<Shout | undefined>()
   const handleShare = (shared: Shout | undefined) => {
     showModal('share')
     setShareData(shared)
   }
 
-  const asOption = (o: string) => {
-    const value = ['day', 'week', 'month', 'year'].includes(o)
-      ? Math.floor(Date.now() / 1000) - PERIODS[o as PeriodType]
-      : o
-    return { value, title: t(o) }
+  const asOption = (o: string): Option => {
+    const isPeriod = ['day', 'week', 'month', 'year'].includes(o)
+    const value = isPeriod ? Math.floor(Date.now() / 1000) - PERIODS[o as PeriodType] : o
+    return { value, title: t(capitalize(o)) }
   }
-  const asOptions = (opts: PeriodType[] | FeedMode[]) => opts.map(asOption)
-  const [currentPeriod, setCurrentPeriod] = createSignal(asOption(searchParams?.period || 'month'))
-  createEffect(() => {
-    setCurrentPeriod(asOption(searchParams?.period || 'month'))
-  })
+  const asOptionsGroup = (
+    opts: string[], 
+    title?: string, 
+    onChange?: (option: Option) => void
+  ): OptionGroup | Option[] => {
+    const options = opts.map(asOption)
+    return onChange ? { 
+          title, 
+          options, 
+          currentOption: options[0], 
+          onChange
+        }  as OptionGroup
+      : options as Option[]
+  }
 
   return (
     <div class={clsx('wide-container', styles.feed)}>
@@ -123,7 +149,7 @@ export const FeedView = (props: FeedProps) => {
             <Placeholder type={loc?.pathname} mode="feed" />
           </Show>
 
-          <Show when={(session() || loc?.pathname === 'feed') && props.shouts}>
+          <Show when={(session() || loc?.pathname === 'feed') && feed()}>
             <div class={styles.filtersContainer}>
               <ul class={clsx('view-switcher', styles.feedFilter)}>
                 <li
@@ -149,19 +175,20 @@ export const FeedView = (props: FeedProps) => {
                 </li>
               </ul>
               <div class={styles.dropdowns}>
-                <Show when={searchParams?.period}>
-                  <DropDown
-                    popupProps={{ horizontalAnchor: 'right' }}
-                    options={asOptions(['week', 'month', 'year'])}
-                    currentOption={currentPeriod()}
-                    triggerCssClass={styles.periodSwitcher}
-                    onChange={(period: Option) => changeSearchParams({ period: period.value })}
-                  />
-                </Show>
                 <DropDown
                   popupProps={{ horizontalAnchor: 'right' }}
-                  options={asOptions(['all', 'featured', 'followed', 'unrated', 'discussed', 'coauthored'])}
-                  currentOption={currentPeriod()}
+                  options={asOptionsGroup(['all time', 'day', 'week', 'month', 'year']) as Option[]}
+                  currentOption={{ value: currentPeriod() || 0, title: t('All Time') } as Option}
+                  triggerCssClass={styles.periodSwitcher}
+                  onChange={(opt: Option) => setCurrentPeriod(opt.value as number)}
+                />
+                <DropDown
+                  popupProps={{ horizontalAnchor: 'right' }}
+                  options={[
+                    asOptionsGroup(['all', 'featured', 'not featured'], '', (opt: Option) => setMode(opt.value as FeedMode)) as OptionGroup,
+                    asOptionsGroup(['', 'article', ...EXPO_LAYOUTS], t(layoutFilter() || 'Layout') as string, (opt: Option) => setLayoutFilter(opt.value as ExpoLayoutType)) as OptionGroup
+                  ]}
+                  currentOption={asOption(props.mode || 'all')}
                   triggerCssClass={styles.periodSwitcher}
                   onChange={(mode: Option) => navigate(`/feed/${mode.value}`)}
                 />
@@ -169,8 +196,8 @@ export const FeedView = (props: FeedProps) => {
             </div>
 
             <Show when={!isLoading()} fallback={<Loading />}>
-              <Show when={(props.shouts || []).length > 0}>
-                <For each={(props.shouts || []).slice(0, 4)}>
+              <Show when={(feed() || []).length > 0}>
+                <For each={(feed() || []).slice(0, 4)}>
                   {(article) => (
                     <ArticleCard
                       onShare={(shared) => handleShare(shared)}
@@ -202,7 +229,7 @@ export const FeedView = (props: FeedProps) => {
                   </ul>
                 </div>
 
-                <For each={(props.shouts || []).slice(4)}>
+                <For each={(feed() || []).slice(4)}>
                   {(article) => (
                     <ArticleCard article={article} settings={{ isFeedMode: true }} desktopCoverSize="M" />
                   )}
@@ -214,10 +241,10 @@ export const FeedView = (props: FeedProps) => {
 
         <aside class={clsx('col-md-7 col-xl-6 offset-xl-1', styles.feedAside)}>
           <Show when={isRightColumnLoaded()}>
-            <Show when={topComments().length > 0}>
+            <Show when={recentComments()}>
               <section class={styles.asideSection}>
                 <h4>{t('Comments')}</h4>
-                <For each={topComments()}>
+                <For each={recentComments()}>
                   {(comment) => {
                     return (
                       <div class={styles.comment}>
@@ -232,7 +259,7 @@ export const FeedView = (props: FeedProps) => {
                           <CommentDate comment={comment} isShort={true} isLastInRow={true} />
                         </div>
                         <div class={clsx('text-truncate', styles.commentArticleTitle)}>
-                          <a href={`/${comment.shout.slug}`}>{comment.shout.title}</a>
+                          <A href={`/${comment.shout.slug}`}>{comment.shout.title}</A>
                         </div>
                       </div>
                     )
@@ -247,7 +274,7 @@ export const FeedView = (props: FeedProps) => {
                 <For each={topTopics().slice(0, 7)}>
                   {(topic) => (
                     <span class={clsx(stylesTopic.shoutTopic, styles.topic)}>
-                      <a href={`/topic/${topic.slug}`}>{topic.title}</a>{' '}
+                      <A href={`/topic/${topic.slug}`}>{topic.title}</A>{' '}
                     </span>
                   )}
                 </For>
@@ -258,23 +285,24 @@ export const FeedView = (props: FeedProps) => {
               <h4>{t('Knowledge base')}</h4>
               <ul class="nodash">
                 <li>
-                  <A href={'/guide'}>Как устроен Дискурс</A>
+                  <A href="/guide">{t('How Discours works')}</A>
                 </li>
                 <li>
-                  <A href="/how-to-write-a-good-article">Как создать хороший текст</A>
+                  <A href="/how-to-write-a-good-article">{t('How to write a good article')}</A>
                 </li>
                 <li>
-                  <A href="#">Правила конструктивных дискуссий</A>
+                  <A href="/rules">{t('Rules of constructive discussions')}</A>
                 </li>
                 <li>
-                  <A href={'/principles'}>Принципы сообщества</A>
+                  <A href="/principles">{t('Community principles')}</A>
                 </li>
               </ul>
             </section>
+
             <Show when={unrated()}>
               <section class={clsx(styles.asideSection)}>
                 <h4>{t('Be the first to rate')}</h4>
-                <For each={unrated()}>
+                <For each={(unrated() || []) as Shout[]}>
                   {(article) => (
                     <ArticleCard article={article} settings={{ noimage: true, nodate: true }} />
                   )}

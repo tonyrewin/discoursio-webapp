@@ -34,14 +34,14 @@ const fetchHomeTopData = async () => {
       featured: true,
       after
     },
-    order_by: 'likes_stat',
+    order_by: 'rating_stat',
     limit: 10
   }
   const topMonthLoader = loadShouts({ ...options })
 
   const topRatedLoader = loadShouts({
     filters: { featured: true },
-    order_by: 'likes_stat',
+    order_by: 'rating_stat',
     limit: 10
   })
   const topRatedShouts = await topRatedLoader()
