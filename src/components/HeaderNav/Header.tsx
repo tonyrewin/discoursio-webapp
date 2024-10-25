@@ -1,6 +1,7 @@
 import { A, redirect, useSearchParams } from '@solidjs/router'
 import { clsx } from 'clsx'
 import { Show, createEffect, createSignal, onCleanup, onMount } from 'solid-js'
+import { isServer } from 'solid-js/web'
 import { useLocalize } from '~/context/localize'
 import { useSession } from '~/context/session'
 import { useUI } from '~/context/ui'
@@ -53,6 +54,7 @@ export const Header = (props: Props) => {
   let windowScrollTop = 0
 
   createEffect(() => {
+    if (isServer) return
     const mainContent = document.querySelector<HTMLDivElement>('.main-content')
 
     if (fixed() || modal() !== null) {
@@ -171,34 +173,34 @@ export const Header = (props: Props) => {
               <ul class="view-switcher">
                 <Link
                   onMouseOver={() => toggleSubnavigation(true, setIsZineVisible)}
-                  onMouseOut={(event?: MouseEvent) => hideSubnavigation(event, 0)}
+                  onMouseOut={(event?: MouseEvent) => hideSubnavigation(event)}
                   href="/"
                   active={isZineVisible()}
                   body={t('Journal')}
                 />
                 <Link
                   onMouseOver={() => toggleSubnavigation(true, setIsFeedVisible)}
-                  onMouseOut={(event?: MouseEvent) => hideSubnavigation(event, 0)}
+                  onMouseOut={(event?: MouseEvent) => hideSubnavigation(event)}
                   href="/feed"
                   active={isFeedVisible()}
                   body={t('Feed')}
                 />
                 <Link
                   onMouseOver={() => toggleSubnavigation(true, setIsTopicsVisible)}
-                  onMouseOut={(event?: MouseEvent) => hideSubnavigation(event, 0)}
+                  onMouseOut={(event?: MouseEvent) => hideSubnavigation(event)}
                   href="/topic"
                   active={isTopicsVisible()}
                   body={t('Topics')}
                 />
                 <Link
                   onMouseOver={(event?: MouseEvent) => hideSubnavigation(event, 0)}
-                  onMouseOut={(event?: MouseEvent) => hideSubnavigation(event, 0)}
+                  onMouseOut={(event?: MouseEvent) => hideSubnavigation(event)}
                   href="/author"
                   body={t('Authors')}
                 />
                 <Link
                   onMouseOver={() => toggleSubnavigation(true, setIsKnowledgeBaseVisible)}
-                  onMouseOut={(event?: MouseEvent) => hideSubnavigation(event, 0)}
+                  onMouseOut={(event?: MouseEvent) => hideSubnavigation(event)}
                   href="/guide"
                   body={t('Knowledge base')}
                   active={isKnowledgeBaseVisible()}
