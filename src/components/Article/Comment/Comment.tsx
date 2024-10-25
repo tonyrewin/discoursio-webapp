@@ -1,24 +1,27 @@
-import { getPagePath } from '@nanostores/router'
+import { A } from '@solidjs/router'
 import { clsx } from 'clsx'
 import { For, Show, Suspense, createMemo, createSignal, lazy } from 'solid-js'
-
-import { useConfirm } from '../../../context/confirm'
-import { useLocalize } from '../../../context/localize'
-import { useReactions } from '../../../context/reactions'
-import { useSession } from '../../../context/session'
-import { useSnackbar } from '../../../context/snackbar'
-import { Author, Reaction, ReactionKind } from '../../../graphql/schema/core.gen'
-import { router } from '../../../stores/router'
+import { Icon } from '~/components/_shared/Icon'
+import { ShowIfAuthenticated } from '~/components/_shared/ShowIfAuthenticated'
+import { useLocalize } from '~/context/localize'
+import { useReactions } from '~/context/reactions'
+import { useSession } from '~/context/session'
+import { useSnackbar, useUI } from '~/context/ui'
+import deleteReactionMutation from '~/graphql/mutation/core/reaction-destroy'
+import {
+  Author,
+  MutationCreate_ReactionArgs,
+  MutationUpdate_ReactionArgs,
+  Reaction,
+  ReactionKind
+} from '~/graphql/schema/core.gen'
 import { AuthorLink } from '../../Author/AuthorLink'
 import { Userpic } from '../../Author/Userpic'
-import { Icon } from '../../_shared/Icon'
-import { ShowIfAuthenticated } from '../../_shared/ShowIfAuthenticated'
 import { CommentDate } from '../CommentDate'
-import { CommentRatingControl } from '../CommentRatingControl'
-
+import { RatingControl } from '../RatingControl'
 import styles from './Comment.module.scss'
 
-const SimplifiedEditor = lazy(() => import('../../Editor/SimplifiedEditor'))
+const MiniEditor = lazy(() => import('../../Editor/MiniEditor'))
 
 type Props = {
   comment: Reaction
@@ -38,20 +41,19 @@ export const Comment = (props: Props) => {
   const [isReplyVisible, setIsReplyVisible] = createSignal(false)
   const [loading, setLoading] = createSignal(false)
   const [editMode, setEditMode] = createSignal(false)
-  const [clearEditor, setClearEditor] = createSignal(false)
   const [editedBody, setEditedBody] = createSignal<string>()
-  const { author, session } = useSession()
-  const { createReaction, deleteReaction, updateReaction } = useReactions()
-  const { showConfirm } = useConfirm()
+  const { session, client } = useSession()
+  const author = createMemo<Author>(() => session()?.user?.app_data?.profile as Author)
+  const { createShoutReaction, updateShoutReaction } = useReactions()
+  const { showConfirm } = useUI()
   const { showSnackbar } = useSnackbar()
-
   const canEdit = createMemo(
     () =>
       Boolean(author()?.id) &&
-      (props.comment?.created_by?.slug === author()?.slug || session()?.user?.roles.includes('editor')),
+      (props.comment?.created_by?.slug === author()?.slug || session()?.user?.roles?.includes('editor'))
   )
 
-  const body = createMemo(() => (editedBody() ? editedBody().trim() : props.comment.body.trim() || ''))
+  const body = createMemo(() => (editedBody() ? editedBody()?.trim() : props.comment.body?.trim() || ''))
 
   const remove = async () => {
     if (props.comment?.id) {
@@ -60,16 +62,24 @@ export const Comment = (props: Props) => {
           confirmBody: t('Are you sure you want to delete this comment?'),
           confirmButtonLabel: t('Delete'),
           confirmButtonVariant: 'danger',
-          declineButtonVariant: 'primary',
+          declineButtonVariant: 'primary'
         })
 
         if (isConfirmed) {
-          const { error } = await deleteReaction(props.comment.id)
+          const resp = await client()
+            ?.mutation(deleteReactionMutation, { id: props.comment.id })
+            .toPromise()
+          const result = resp?.data?.delete_reaction
+          const { error } = result
           const notificationType = error ? 'error' : 'success'
           const notificationMessage = error
             ? t('Failed to delete comment')
             : t('Comment successfully deleted')
-          await showSnackbar({ type: notificationType, body: notificationMessage })
+          await showSnackbar({
+            type: notificationType,
+            body: notificationMessage,
+            duration: 3
+          })
 
           if (!error && props.onDelete) {
             props.onDelete(props.comment.id)
@@ -82,37 +92,39 @@ export const Comment = (props: Props) => {
     }
   }
 
-  const handleCreate = async (value) => {
+  const handleCreate = async (value: string) => {
     try {
       setLoading(true)
-      await createReaction({
-        kind: ReactionKind.Comment,
-        reply_to: props.comment.id,
-        body: value,
-        shout: props.comment.shout.id,
-      })
-      setClearEditor(true)
+      await createShoutReaction({
+        reaction: {
+          kind: ReactionKind.Comment,
+          reply_to: props.comment.id,
+          body: value,
+          shout: props.comment.shout.id
+        }
+      } as MutationCreate_ReactionArgs)
       setIsReplyVisible(false)
       setLoading(false)
     } catch (error) {
       console.error('[handleCreate reaction]:', error)
     }
-    setClearEditor(false)
   }
 
   const toggleEditMode = () => {
     setEditMode((oldEditMode) => !oldEditMode)
   }
 
-  const handleUpdate = async (value) => {
+  const handleUpdate = async (value: string) => {
     setLoading(true)
     try {
-      const reaction = await updateReaction({
-        id: props.comment.id,
-        kind: ReactionKind.Comment,
-        body: value,
-        shout: props.comment.shout.id,
-      })
+      const reaction = await updateShoutReaction({
+        reaction: {
+          id: props.comment.id || 0,
+          kind: ReactionKind.Comment,
+          body: value,
+          shout: props.comment.shout.id
+        }
+      } as MutationUpdate_ReactionArgs)
       if (reaction) {
         setEditedBody(value)
       }
@@ -127,7 +139,8 @@ export const Comment = (props: Props) => {
     <li
       id={`comment_${props.comment.id}`}
       class={clsx(styles.comment, props.class, {
-        [styles.isNew]: props.lastSeen > (props.comment.updated_at || props.comment.created_at),
+        [styles.isNew]:
+          (props.lastSeen || Date.now()) > (props.comment.updated_at || props.comment.created_at)
       })}
     >
       <Show when={!!body()}>
@@ -137,10 +150,10 @@ export const Comment = (props: Props) => {
             fallback={
               <div>
                 <Userpic
-                  name={props.comment.created_by.name}
-                  userpic={props.comment.created_by.pic}
+                  name={props.comment.created_by.name || ''}
+                  userpic={props.comment.created_by.pic || ''}
                   class={clsx({
-                    [styles.compactUserpic]: props.compact,
+                    [styles.compactUserpic]: props.compact
                   })}
                 />
                 <small>
@@ -161,32 +174,23 @@ export const Comment = (props: Props) => {
               <Show when={props.showArticleLink}>
                 <div class={styles.articleLink}>
                   <Icon name="arrow-right" class={styles.articleLinkIcon} />
-                  <a
-                    href={`${getPagePath(router, 'article', {
-                      slug: props.comment.shout.slug,
-                    })}?commentId=${props.comment.id}`}
-                  >
+                  <A href={`${props.comment.shout.slug}?commentId=${props.comment.id}`}>
                     {props.comment.shout.title}
-                  </a>
+                  </A>
                 </div>
               </Show>
               <CommentDate showOnHover={true} comment={props.comment} isShort={true} />
-              <CommentRatingControl comment={props.comment} />
+              <RatingControl comment={props.comment} />
             </div>
           </Show>
           <div class={styles.commentBody}>
             <Show when={editMode()} fallback={<div innerHTML={body()} />}>
               <Suspense fallback={<p>{t('Loading')}</p>}>
-                <SimplifiedEditor
-                  initialContent={editedBody() || props.comment.body}
-                  submitButtonText={t('Save')}
-                  quoteEnabled={true}
-                  imageEnabled={true}
+                <MiniEditor
+                  content={editedBody() || props.comment.body || ''}
                   placeholder={t('Write a comment...')}
                   onSubmit={(value) => handleUpdate(value)}
-                  submitByCtrlEnter={true}
                   onCancel={() => setEditMode(false)}
-                  setClear={clearEditor()}
                 />
               </Suspense>
             </Show>
@@ -199,7 +203,7 @@ export const Comment = (props: Props) => {
                   disabled={loading()}
                   onClick={() => {
                     setIsReplyVisible(!isReplyVisible())
-                    props.clickedReply(props.comment.id)
+                    props.clickedReply?.(props.comment.id)
                   }}
                   class={clsx(styles.commentControl, styles.commentControlReply)}
                 >
@@ -240,18 +244,15 @@ export const Comment = (props: Props) => {
               {/*  class={clsx(styles.commentControl, styles.commentControlComplain)}*/}
               {/*  onClick={() => showModal('reportComment')}*/}
               {/*>*/}
-              {/*  {t('Report')}*/}
+              {/*  {t('Complain')}*/}
               {/*</button>*/}
             </div>
 
             <Show when={isReplyVisible() && props.clickedReplyId === props.comment.id}>
               <Suspense fallback={<p>{t('Loading')}</p>}>
-                <SimplifiedEditor
-                  quoteEnabled={true}
-                  imageEnabled={true}
+                <MiniEditor
                   placeholder={t('Write a comment...')}
                   onSubmit={(value) => handleCreate(value)}
-                  submitByCtrlEnter={true}
                 />
               </Suspense>
             </Show>
@@ -260,7 +261,7 @@ export const Comment = (props: Props) => {
       </Show>
       <Show when={props.sortedComments}>
         <ul>
-          <For each={props.sortedComments.filter((r) => r.reply_to === props.comment.id)}>
+          <For each={props.sortedComments?.filter((r) => r.reply_to === props.comment.id)}>
             {(c) => (
               <Comment
                 sortedComments={props.sortedComments}

@@ -1,18 +1,13 @@
-import type { Shout } from '../../graphql/schema/core.gen'
-
-import { getPagePath } from '@nanostores/router'
+import { A } from '@solidjs/router'
 import { clsx } from 'clsx'
-
-import { useConfirm } from '../../context/confirm'
-import { useLocalize } from '../../context/localize'
-import { useSnackbar } from '../../context/snackbar'
-import { router } from '../../stores/router'
+import { useLocalize } from '~/context/localize'
+import { useSnackbar, useUI } from '~/context/ui'
+import type { Shout } from '~/graphql/schema/core.gen'
 import { Icon } from '../_shared/Icon'
 
 import styles from './Draft.module.scss'
 
 type Props = {
-  class?: string
   shout: Shout
   onPublish: (shout: Shout) => void
   onDelete: (shout: Shout) => void
@@ -20,10 +15,10 @@ type Props = {
 
 export const Draft = (props: Props) => {
   const { t, formatDate } = useLocalize()
-  const { showConfirm } = useConfirm()
+  const { showConfirm } = useUI()
   const { showSnackbar } = useSnackbar()
 
-  const handlePublishLinkClick = (e) => {
+  const handlePublishLinkClick = (e: MouseEvent) => {
     e.preventDefault()
     if (props.shout.main_topic) {
       props.onPublish(props.shout)
@@ -32,14 +27,14 @@ export const Draft = (props: Props) => {
     }
   }
 
-  const handleDeleteLinkClick = async (e) => {
+  const handleDeleteLinkClick = async (e: MouseEvent) => {
     e.preventDefault()
 
     const isConfirmed = await showConfirm({
       confirmBody: t('Are you sure you want to delete this draft?'),
       confirmButtonLabel: t('Delete'),
       confirmButtonVariant: 'danger',
-      declineButtonVariant: 'primary',
+      declineButtonVariant: 'primary'
     })
     if (isConfirmed) {
       props.onDelete(props.shout)
@@ -49,7 +44,7 @@ export const Draft = (props: Props) => {
   }
 
   return (
-    <div class={clsx(props.class)}>
+    <div class={styles.draft}>
       <div class={styles.created}>
         <Icon name="pencil-outline" class={styles.icon} />{' '}
         {formatDate(new Date(props.shout.created_at * 1000), { hour: '2-digit', minute: '2-digit' })}
@@ -58,12 +53,9 @@ export const Draft = (props: Props) => {
         <span class={styles.title}>{props.shout.title || t('Unnamed draft')}</span> {props.shout.subtitle}
       </div>
       <div class={styles.actions}>
-        <a
-          class={styles.actionItem}
-          href={getPagePath(router, 'edit', { shoutId: props.shout?.id.toString() })}
-        >
+        <A class={styles.actionItem} href={`/edit/${props.shout?.id.toString()}`}>
           {t('Edit')}
-        </a>
+        </A>
         <span onClick={handlePublishLinkClick} class={clsx(styles.actionItem, styles.publish)}>
           {t('Publish')}
         </span>

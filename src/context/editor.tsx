@@ -1,20 +1,29 @@
-import type { JSX } from 'solid-js'
-
-import { openPage } from '@nanostores/router'
+import { HocuspocusProvider } from '@hocuspocus/provider'
+import { useMatch, useNavigate } from '@solidjs/router'
 import { Editor } from '@tiptap/core'
-import { Accessor, createContext, createSignal, useContext } from 'solid-js'
+import Collaboration from '@tiptap/extension-collaboration'
+import CollaborationCursor from '@tiptap/extension-collaboration-cursor'
+import type { JSX } from 'solid-js'
+import { Accessor, createContext, createEffect, createSignal, on, onCleanup, useContext } from 'solid-js'
 import { SetStoreFunction, createStore } from 'solid-js/store'
-
-import { apiClient } from '../graphql/client/core'
-import { Topic, TopicInput } from '../graphql/schema/core.gen'
-import { router, useRouter } from '../stores/router'
-import { addArticles } from '../stores/zine/articles'
-import { slugify } from '../utils/slugify'
-
+import { debounce } from 'throttle-debounce'
+import uniqolor from 'uniqolor'
+import { Doc } from 'yjs'
+import { useSnackbar } from '~/context/ui'
+import createShoutMutation from '~/graphql/mutation/core/article-create'
+import deleteShoutMutation from '~/graphql/mutation/core/article-delete'
+import updateShoutMutation from '~/graphql/mutation/core/article-update'
+import { Topic, TopicInput } from '~/graphql/schema/core.gen'
+import { slugify } from '~/intl/translit'
+import { useFeed } from '../context/feed'
 import { useLocalize } from './localize'
-import { useSnackbar } from './snackbar'
+import { useSession } from './session'
 
-type WordCounter = {
+export const AUTO_SAVE_DELAY = 3000
+const yDocs: Record<string, Doc> = {}
+const providers: Record<string, HocuspocusProvider> = {}
+
+export type WordCounter = {
   characters: number
   words: number
 }
@@ -34,12 +43,11 @@ export type ShoutForm = {
   media?: string
 }
 
-type EditorContextType = {
+export type EditorContextType = {
   isEditorPanelVisible: Accessor<boolean>
   wordCounter: Accessor<WordCounter>
   form: ShoutForm
   formErrors: Record<keyof ShoutForm, string>
-  editorRef: { current: () => Editor | null }
   saveShout: (form: ShoutForm) => Promise<void>
   saveDraft: (form: ShoutForm) => Promise<void>
   saveDraftToLocalStorage: (form: ShoutForm) => void
@@ -51,10 +59,16 @@ type EditorContextType = {
   countWords: (value: WordCounter) => void
   setForm: SetStoreFunction<ShoutForm>
   setFormErrors: SetStoreFunction<Record<keyof ShoutForm, string>>
-  setEditor: (editor: () => Editor) => void
+  editing: Accessor<Editor | undefined>
+  setEditing: SetStoreFunction<Editor | undefined>
+  isCollabMode: Accessor<boolean>
+  setIsCollabMode: SetStoreFunction<boolean>
+  handleInputChange: (key: keyof ShoutForm, value: string) => void
+  saving: Accessor<boolean>
+  hasChanges: Accessor<boolean>
 }
 
-const EditorContext = createContext<EditorContextType>()
+export const EditorContext = createContext<EditorContextType>({} as EditorContextType)
 
 export function useEditorContext() {
   return useContext(EditorContext)
@@ -64,41 +78,50 @@ const topic2topicInput = (topic: Topic): TopicInput => {
   return {
     id: topic.id,
     slug: topic.slug,
-    title: topic.title,
+    title: topic.title
   }
 }
 
 const saveDraftToLocalStorage = (formToSave: ShoutForm) => {
-  localStorage.setItem(`shout-${formToSave.shoutId}`, JSON.stringify(formToSave))
+  localStorage?.setItem(`shout-${formToSave.shoutId}`, JSON.stringify(formToSave))
 }
 const getDraftFromLocalStorage = (shoutId: number) => {
-  return JSON.parse(localStorage.getItem(`shout-${shoutId}`) || '{}')
+  return JSON.parse(localStorage?.getItem(`shout-${shoutId}`) || '{}')
 }
 
 const removeDraftFromLocalStorage = (shoutId: number) => {
-  localStorage.removeItem(`shout-${shoutId}`)
+  localStorage?.removeItem(`shout-${shoutId}`)
+}
+
+const defaultForm: ShoutForm = {
+  body: '',
+  slug: '',
+  shoutId: 0,
+  title: '',
+  selectedTopics: []
 }
 
 export const EditorProvider = (props: { children: JSX.Element }) => {
   const localize = useLocalize()
-  const { page } = useRouter()
+  const navigate = useNavigate()
+  const matchEdit = useMatch(() => '/edit')
+  const matchEditSettings = useMatch(() => '/editSettings')
+  const { client, session } = useSession()
+  const { addFeed } = useFeed()
   const snackbar = useSnackbar()
   const [isEditorPanelVisible, setIsEditorPanelVisible] = createSignal<boolean>(false)
-  const editorRef: { current: () => Editor | null } = { current: () => null }
-  const [form, setForm] = createStore<ShoutForm>({
-    body: '',
-    slug: '',
-    shoutId: 0,
-    title: '',
-    selectedTopics: [],
-  })
+  const [form, setForm] = createStore<ShoutForm>(defaultForm)
   const [formErrors, setFormErrors] = createStore({} as Record<keyof ShoutForm, string>)
-  const [wordCounter, setWordCounter] = createSignal<WordCounter>({
-    characters: 0,
-    words: 0,
-  })
+  const [wordCounter, setWordCounter] = createSignal<WordCounter>({ characters: 0, words: 0 })
   const toggleEditorPanel = () => setIsEditorPanelVisible((value) => !value)
-  const countWords = (value) => setWordCounter(value)
+  const [isCollabMode, setIsCollabMode] = createSignal<boolean>(false)
+
+  // current publishing editor instance to connect settings, panel and editor
+  const [editing, setEditing] = createSignal<Editor | undefined>(undefined)
+  const [saving, setSaving] = createSignal(false)
+  const [hasChanges, setHasChanges] = createSignal(false)
+
+  const countWords = (value: WordCounter) => setWordCounter(value)
   const validate = () => {
     if (!form.title) {
       setFormErrors('title', localize?.t('Please, set the article title') || '')
@@ -109,7 +132,7 @@ export const EditorProvider = (props: { children: JSX.Element }) => {
     if (form.layout === 'video' && !parsedMedia[0]) {
       snackbar?.showSnackbar({
         type: 'error',
-        body: localize?.t('Looks like you forgot to upload the video'),
+        body: localize?.t('Looks like you forgot to upload the video')
       })
       return false
     }
@@ -127,11 +150,14 @@ export const EditorProvider = (props: { children: JSX.Element }) => {
   }
 
   const updateShout = async (formToUpdate: ShoutForm, { publish }: { publish: boolean }) => {
-    if (!formToUpdate.shoutId) {
-      console.error(formToUpdate)
-      return { error: 'not enought data' }
+    if (!formToUpdate.shoutId && formToUpdate.body) {
+      console.debug('[updateShout] no shoutId, but body:', formToUpdate)
+      const resp = await client()
+        ?.mutation(createShoutMutation, { shout: { layout: formToUpdate.layout, body: formToUpdate.body } })
+        .toPromise()
+      return resp?.data?.create_shout
     }
-    return await apiClient.updateArticle({
+    const resp = await client()?.mutation(updateShoutMutation, {
       shout_id: formToUpdate.shoutId,
       shout_input: {
         body: formToUpdate.body,
@@ -145,22 +171,17 @@ export const EditorProvider = (props: { children: JSX.Element }) => {
         lead: formToUpdate.lead,
         description: formToUpdate.description,
         cover: formToUpdate.coverImageUrl,
-        media: formToUpdate.media,
+        media: formToUpdate.media
       },
-      publish,
+      publish
     })
+    return resp?.data?.update_shout
   }
 
   const saveShout = async (formToSave: ShoutForm) => {
-    if (isEditorPanelVisible()) {
-      toggleEditorPanel()
-    }
+    isEditorPanelVisible() && toggleEditorPanel()
 
-    if (page()?.route === 'edit' && !validate()) {
-      return
-    }
-
-    if (page()?.route === 'editSettings' && !validateSettings()) {
+    if ((matchEdit() && !validate()) || (matchEditSettings() && !validateSettings())) {
       return
     }
 
@@ -171,12 +192,7 @@ export const EditorProvider = (props: { children: JSX.Element }) => {
         return
       }
       removeDraftFromLocalStorage(formToSave.shoutId)
-
-      if (shout?.published_at) {
-        openPage(router, 'article', { slug: shout.slug })
-      } else {
-        openPage(router, 'drafts')
-      }
+      navigate(shout?.published_at ? `/article/${shout.slug}` : '/edit')
     } catch (error) {
       console.error('[saveShout]', error)
       snackbar?.showSnackbar({ type: 'error', body: localize?.t('Error') || '' })
@@ -192,30 +208,21 @@ export const EditorProvider = (props: { children: JSX.Element }) => {
   }
 
   const publishShout = async (formToPublish: ShoutForm) => {
-    const editorPanelVisible = isEditorPanelVisible()
-    const pageRoute = page()?.route
+    isEditorPanelVisible() && toggleEditorPanel()
 
-    if (editorPanelVisible) {
-      toggleEditorPanel()
+    if ((matchEdit() && !validate()) || (matchEditSettings() && !validateSettings())) {
+      return
     }
 
-    if (pageRoute === 'edit') {
-      if (!validate()) {
-        return
-      }
-
+    if (matchEdit()) {
       const slug = slugify(form.title)
       setForm('slug', slug)
-      openPage(router, 'editSettings', { shoutId: form.shoutId.toString() })
+      navigate(`/edit/${form.shoutId}/settings`)
       const { error } = await updateShout(formToPublish, { publish: false })
       if (error) {
         snackbar?.showSnackbar({ type: 'error', body: localize?.t(error) || '' })
+        return
       }
-      return
-    }
-
-    if (!validateSettings()) {
-      return
     }
 
     try {
@@ -224,7 +231,7 @@ export const EditorProvider = (props: { children: JSX.Element }) => {
         snackbar?.showSnackbar({ type: 'error', body: localize?.t(error) || '' })
         return
       }
-      openPage(router, 'feed')
+      navigate('/feed')
     } catch (error) {
       console.error('[publishShout]', error)
       snackbar?.showSnackbar({ type: 'error', body: localize?.t('Error') || '' })
@@ -237,41 +244,113 @@ export const EditorProvider = (props: { children: JSX.Element }) => {
       return
     }
     try {
-      const { shout: newShout, error } = await apiClient.updateArticle({
-        shout_id,
-        publish: true,
-      })
-      if (error) {
-        console.error(error)
-        snackbar?.showSnackbar({ type: 'error', body: error })
-        return
-      }
-      if (newShout) {
-        addArticles([newShout])
-        openPage(router, 'feed')
-      } else {
-        console.error('[publishShoutById] no shout returned:', newShout)
+      const resp = await client()?.mutation(deleteShoutMutation, { shout_id, publish: true }).toPromise()
+      const result = resp?.data?.update_shout
+      if (result) {
+        const { shout: newShout, error } = result
+        if (error) {
+          console.error(error)
+          snackbar?.showSnackbar({ type: 'error', body: error })
+          return
+        }
+        if (newShout) {
+          addFeed([newShout])
+          navigate('/feed')
+        } else {
+          console.error('[publishShoutById] no shout returned:', newShout)
+        }
       }
     } catch (error) {
       console.error('[publishShoutById]', error)
-      snackbar?.showSnackbar({ type: 'error', body: localize?.t('Error') })
+      snackbar?.showSnackbar({ type: 'error', body: localize?.t('Error') || '' })
     }
   }
 
   const deleteShout = async (shout_id: number) => {
     try {
-      await apiClient.deleteShout({
-        shout_id,
-      })
-      return true
+      const resp = await client()?.mutation(deleteShoutMutation, { shout_id }).toPromise()
+      return resp?.data?.delete_shout
     } catch {
       snackbar?.showSnackbar({ type: 'error', body: localize?.t('Error') || '' })
       return false
     }
   }
 
-  const setEditor = (editor: () => Editor) => {
-    editorRef.current = editor
+  const debouncedAutoSave = debounce(AUTO_SAVE_DELAY, async () => {
+    console.log('autoSave called')
+    if (hasChanges()) {
+      console.debug('saving draft', form)
+      setSaving(true)
+      saveDraftToLocalStorage(form)
+      await saveDraft(form)
+      setSaving(false)
+      setHasChanges(false)
+    }
+  })
+  onCleanup(debouncedAutoSave.cancel)
+
+  createEffect(
+    on(
+      isCollabMode,
+      (x?: boolean) => () => {
+        const editorInstance = editing()
+        if (!editorInstance) return
+        try {
+          const docName = `shout-${form.shoutId}`
+          const token = session()?.access_token || ''
+          const profile = session()?.user?.app_data?.profile
+
+          if (!(token && profile)) {
+            throw new Error('Missing authentication data')
+          }
+
+          if (!yDocs[docName]) {
+            yDocs[docName] = new Doc()
+          }
+
+          if (!providers[docName]) {
+            providers[docName] = new HocuspocusProvider({
+              url: 'wss://hocuspocus.discours.io',
+              name: docName,
+              document: yDocs[docName],
+              token
+            })
+            console.log(`[collab mode] HocuspocusProvider connected for ${docName}`)
+          }
+          if (x) {
+            const newExtensions = [
+              Collaboration.configure({ document: yDocs[docName] }),
+              CollaborationCursor.configure({
+                provider: providers[docName],
+                user: { name: profile.name, color: uniqolor(profile.slug).color }
+              })
+            ]
+            const extensions = editing()?.options.extensions.concat(newExtensions)
+            editorInstance.setOptions({ ...editorInstance.options, extensions })
+            providers[docName].connect()
+          } else if (editorInstance) {
+            providers[docName].disconnect()
+            const updatedExtensions = editorInstance.options.extensions.filter(
+              (ext) => ext.name !== 'collaboration' && ext.name !== 'collaborationCursor'
+            )
+            editorInstance.setOptions({
+              ...editorInstance.options,
+              extensions: updatedExtensions
+            })
+          }
+        } catch (error) {
+          console.error('[collab mode] error', error)
+        }
+      },
+      { defer: true }
+    )
+  )
+
+  const handleInputChange = (key: keyof ShoutForm, value: string) => {
+    console.log(`[handleInputChange] ${key}: ${value}`)
+    setForm(key, value)
+    setHasChanges(true)
+    debouncedAutoSave()
   }
 
   const actions = {
@@ -286,16 +365,21 @@ export const EditorProvider = (props: { children: JSX.Element }) => {
     countWords,
     setForm,
     setFormErrors,
-    setEditor,
+    setEditing,
+    isCollabMode,
+    setIsCollabMode,
+    handleInputChange,
+    saving,
+    hasChanges
   }
 
   const value: EditorContextType = {
     ...actions,
     form,
     formErrors,
-    editorRef,
     isEditorPanelVisible,
     wordCounter,
+    editing
   }
 
   return <EditorContext.Provider value={value}>{props.children}</EditorContext.Provider>

@@ -1,11 +1,11 @@
 import { clsx } from 'clsx'
 import { Show, createSignal } from 'solid-js'
 
-import { Topic } from '../../../graphql/schema/core.gen'
-import { MediaItem } from '../../../pages/types'
+import { Icon } from '~/components/_shared/Icon'
+import { Image } from '~/components/_shared/Image'
+import { Topic } from '~/graphql/schema/core.gen'
+import { MediaItem } from '~/types/mediaitem'
 import { CardTopic } from '../../Feed/CardTopic'
-import { Icon } from '../../_shared/Icon'
-import { Image } from '../../_shared/Image'
 
 import styles from './AudioHeader.module.scss'
 
@@ -30,19 +30,19 @@ export const AudioHeader = (props: Props) => {
       </div>
       <div class={styles.albumInfo}>
         <Show when={props.topic}>
-          <CardTopic title={props.topic.title} slug={props.topic.slug} />
+          <CardTopic title={props.topic.title || ''} slug={props.topic.slug} />
         </Show>
         <h1>{props.title}</h1>
         <Show when={props.artistData}>
           <div class={styles.artistData}>
             <Show when={props.artistData?.artist}>
-              <div class={styles.item}>{props.artistData.artist}</div>
+              <div class={styles.item}>{props.artistData?.artist || ''}</div>
             </Show>
             <Show when={props.artistData?.date}>
-              <div class={styles.item}>{props.artistData.date}</div>
+              <div class={styles.item}>{props.artistData?.date || ''}</div>
             </Show>
             <Show when={props.artistData?.genre}>
-              <div class={styles.item}>{props.artistData.genre}</div>
+              <div class={styles.item}>{props.artistData?.genre || ''}</div>
             </Show>
           </div>
         </Show>

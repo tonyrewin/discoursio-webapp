@@ -2,8 +2,8 @@ import { FACEBOOK, TELEGRAM, TWITTER, VK, createSocialShare } from '@solid-primi
 import { clsx } from 'clsx'
 import { Show, createSignal } from 'solid-js'
 
-import { useLocalize } from '../../../context/localize'
-import { useSnackbar } from '../../../context/snackbar'
+import { useLocalize } from '~/context/localize'
+import { useSnackbar } from '~/context/ui'
 import { Icon } from '../Icon'
 import { Popover } from '../Popover'
 
@@ -28,13 +28,13 @@ export const ShareLinks = (props: Props) => {
   const [share] = createSocialShare(() => ({
     title: props.title,
     url: props.shareUrl,
-    description: props.description,
+    description: props.description
   }))
 
-  const handleShare = (network) => {
+  const handleShare = (network: string | undefined) => {
     share(network)
     if (props.variant === 'inModal') {
-      props.onShareClick()
+      props.onShareClick?.()
     }
   }
   const copyLink = async () => {
@@ -43,7 +43,7 @@ export const ShareLinks = (props: Props) => {
       setIsLinkCopied(true)
       setTimeout(() => {
         setIsLinkCopied(false)
-        props.onShareClick()
+        props.onShareClick?.()
       }, 3000)
     } else {
       showSnackbar({ body: t('Link copied') })
@@ -55,7 +55,6 @@ export const ShareLinks = (props: Props) => {
       <ul class="nodash">
         <li>
           <button
-            role="button"
             class={clsx(styles.shareControl, popupStyles.action)}
             onClick={() => handleShare(FACEBOOK)}
           >
@@ -65,7 +64,6 @@ export const ShareLinks = (props: Props) => {
         </li>
         <li>
           <button
-            role="button"
             class={clsx(styles.shareControl, popupStyles.action)}
             onClick={() => handleShare(TWITTER)}
           >
@@ -75,7 +73,6 @@ export const ShareLinks = (props: Props) => {
         </li>
         <li>
           <button
-            role="button"
             class={clsx(styles.shareControl, popupStyles.action)}
             onClick={() => handleShare(TELEGRAM)}
           >
@@ -84,11 +81,7 @@ export const ShareLinks = (props: Props) => {
           </button>
         </li>
         <li>
-          <button
-            role="button"
-            class={clsx(styles.shareControl, popupStyles.action)}
-            onClick={() => handleShare(VK)}
-          >
+          <button class={clsx(styles.shareControl, popupStyles.action)} onClick={() => handleShare(VK)}>
             <Icon name="vk-white" class={clsx(styles.icon, popupStyles.icon)} />
             VK
           </button>
@@ -97,22 +90,20 @@ export const ShareLinks = (props: Props) => {
           <Show
             when={props.variant === 'inModal'}
             fallback={
-              <button
-                role="button"
-                class={clsx(styles.shareControl, popupStyles.action)}
-                onClick={copyLink}
-              >
+              <button class={clsx(styles.shareControl, popupStyles.action)} onClick={copyLink}>
                 <Icon name="link-white" class={clsx(styles.icon, popupStyles.icon)} />
                 {t('Copy link')}
               </button>
             }
           >
             <form class={clsx('pretty-form__item', styles.linkInput)}>
-              <input type="text" name="link" readonly value={props.shareUrl} />
-              <label for="link">{t('Copy link')}</label>
+              <label for="link">
+                <input type="text" name="link" readonly value={props.shareUrl} />
+                {t('Copy link')}
+              </label>
 
               <Popover content={t('Copy link')}>
-                {(triggerRef: (el) => void) => (
+                {(triggerRef: (el: HTMLElement) => void) => (
                   <div class={styles.copyButton} onClick={copyLink} ref={triggerRef}>
                     <Icon name="copy" class={clsx(styles.icon, popupStyles.icon)} />
                   </div>

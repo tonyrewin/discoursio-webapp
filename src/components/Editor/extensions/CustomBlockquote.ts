@@ -17,17 +17,19 @@ export const CustomBlockquote = Blockquote.extend({
   content: 'block+',
 
   addOptions(): BlockquoteOptions {
-    return {} as BlockquoteOptions
+    return {
+      HTMLAttributes: { class: 'blockquote' }
+    } as BlockquoteOptions
   },
 
   addAttributes() {
     return {
       'data-float': {
-        default: null,
+        default: null
       },
       'data-type': {
-        default: null,
-      },
+        default: null
+      }
     }
   },
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -41,7 +43,7 @@ export const CustomBlockquote = Blockquote.extend({
       setBlockQuoteFloat:
         (value) =>
         ({ commands }) =>
-          commands.updateAttributes(this.name, { 'data-float': value }),
+          commands.updateAttributes(this.name, { 'data-float': value })
     }
-  },
+  }
 })

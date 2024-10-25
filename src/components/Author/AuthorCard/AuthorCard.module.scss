@@ -1,4 +1,16 @@
 .author {
+  @include media-breakpoint-down(md) {
+    justify-content: center;
+  }
+
+  @include media-breakpoint-up(md) {
+    margin-bottom: 2.4rem;
+  }
+
+  @include media-breakpoint-down(lg) {
+    flex-wrap: wrap;
+  }
+
   display: flex;
   align-items: center;
   flex-flow: row nowrap;
@@ -8,39 +20,29 @@
     margin-bottom: 0;
   }
 
-  @include media-breakpoint-down(md) {
-    justify-content: center;
-  }
-
-  @include media-breakpoint-up(md) {
-    margin-bottom: 2.4rem;
-  }
-
   .authorName {
-    @include font-size(4rem);
-
+    font-size:4rem;
     font-weight: 700;
     margin-bottom: 1.2rem;
   }
 
   .authorAbout {
-    @include font-size(2rem);
-
+    font-size:2rem;
     color: #696969;
     font-weight: 500;
     margin-top: 1.5rem;
   }
 
   .authorActions {
+    @include media-breakpoint-down(md) {
+      justify-content: center;
+    }
+
     margin: 2rem -0.8rem 0 0;
     padding-left: 0;
     display: flex;
     flex-direction: row;
     gap: 1rem;
-
-    @include media-breakpoint-down(md) {
-      justify-content: center;
-    }
   }
 
   .authorActionsLabel {
@@ -50,27 +52,24 @@
   }
 
   .authorActionsLabelMobile {
-    display: none;
-
     @include media-breakpoint-down(sm) {
       display: block;
     }
+
+    display: none;
   }
 
   .authorDetails {
-    display: block;
-    margin-bottom: 0;
-
     @include media-breakpoint-down(md) {
       flex: 1 100%;
       text-align: center;
     }
+
+    display: block;
+    margin-bottom: 0;
   }
 
   .listWrapper & {
-    align-items: flex-start;
-    margin-bottom: 2rem;
-
     @include media-breakpoint-down(sm) {
       margin-bottom: 3rem;
     }
@@ -78,6 +77,9 @@
     @include media-breakpoint-between(md, lg) {
       margin-bottom: 3rem;
     }
+
+    align-items: flex-start;
+    margin-bottom: 2rem;
 
     .circlewrap {
       margin-top: 1rem;
@@ -88,10 +90,6 @@
     }
   }
 
-  @include media-breakpoint-down(lg) {
-    flex-wrap: wrap;
-  }
-
   .buttonWriteMessage {
     border-radius: 0.8rem;
     padding-bottom: 0.6rem;
@@ -100,8 +98,6 @@
 }
 
 .authorDetails {
-  flex: 0 0 auto;
-
   @include media-breakpoint-up(sm) {
     align-items: center;
     display: flex;
@@ -118,12 +114,11 @@
       flex-wrap: nowrap;
     }
   }
+
+  flex: 0 0 auto;
 }
 
 .authorDetailsWrapper {
-  flex: 1 0;
-  position: relative;
-
   @include media-breakpoint-up(sm) {
     flex: 1;
   }
@@ -139,11 +134,13 @@
   @include media-breakpoint-up(md) {
     padding-right: 1.2rem;
   }
+
+  flex: 1 0;
+  position: relative;
 }
 
 .authorName {
-  @include font-size(4rem);
-
+  font-size:4rem;
   line-height: 1.1;
 }
 
@@ -160,6 +157,15 @@
 }
 
 .authorSubscribeSocial {
+  @include media-breakpoint-down(sm) {
+    flex: 1 100%;
+    justify-content: center;
+  }
+
+  @include media-breakpoint-down(md) {
+    justify-content: center;
+  }
+
   align-items: center;
   display: flex;
   margin: 0.5rem 0 2rem -0.4rem;
@@ -175,7 +181,7 @@
     width: 24px;
 
     &::before {
-      background-image: url(/icons/user-link-default.svg);
+      background-image: url('/icons/user-link-default.svg');
       background-repeat: no-repeat;
       background-position: 50% 50%;
       background-size: contain;
@@ -193,12 +199,13 @@
       background: #000;
 
       &::before {
-        filter: invert(1);
+        // filter: invert(1);
+        fill: var(--icon-color-invert);
+        color: var(--icon-color);
       }
 
       .authorSubscribeSocialLabel {
-        @include font-size(1.6rem);
-
+        font-size:1.6rem;
         color: #000;
         display: block;
         left: 100%;
@@ -209,7 +216,7 @@
 
     &[href*='facebook.com/'] {
       &::before {
-        background-image: url(/icons/user-link-facebook.svg);
+        background-image: url('/icons/user-link-facebook.svg');
       }
 
       &:hover {
@@ -221,7 +228,7 @@
 
     &[href*='twitter.com/'] {
       &::before {
-        background-image: url(/icons/user-link-twitter.svg);
+        background-image: url('/icons/user-link-twitter.svg');
       }
 
       &:hover {
@@ -234,7 +241,7 @@
     &[href*='telegram.com/'],
     &[href*='t.me/'] {
       &::before {
-        background-image: url(/icons/user-link-telegram.svg);
+        background-image: url('/icons/user-link-telegram.svg');
       }
 
       &:hover {
@@ -247,7 +254,7 @@
     &[href*='vk.cc/'],
     &[href*='vk.com/'] {
       &::before {
-        background-image: url(/icons/user-link-vk.svg);
+        background-image: url('/icons/user-link-vk.svg');
       }
 
       &:hover {
@@ -259,7 +266,7 @@
 
     &[href*='tumblr.com/'] {
       &::before {
-        background-image: url(/icons/user-link-tumblr.svg);
+        background-image: url('/icons/user-link-tumblr.svg');
       }
 
       &:hover {
@@ -271,7 +278,7 @@
 
     &[href*='instagram.com/'] {
       &::before {
-        background-image: url(/icons/user-link-instagram.svg);
+        background-image: url('/icons/user-link-instagram.svg');
       }
 
       &:hover {
@@ -283,7 +290,7 @@
 
     &[href*='behance.net/'] {
       &::before {
-        background-image: url(/icons/user-link-behance.svg);
+        background-image: url('/icons/user-link-behance.svg');
       }
 
       &:hover {
@@ -295,7 +302,7 @@
 
     &[href*='dribbble.com/'] {
       &::before {
-        background-image: url(/icons/user-link-dribbble.svg);
+        background-image: url('/icons/user-link-dribbble.svg');
       }
 
       &:hover {
@@ -307,7 +314,7 @@
 
     &[href*='github.com/'] {
       &::before {
-        background-image: url(/icons/user-link-github.svg);
+        background-image: url('/icons/user-link-github.svg');
       }
 
       &:hover {
@@ -319,7 +326,7 @@
 
     &[href*='linkedin.com/'] {
       &::before {
-        background-image: url(/icons/user-link-linkedin.svg);
+        background-image: url('/icons/user-link-linkedin.svg');
       }
 
       &:hover {
@@ -331,7 +338,7 @@
 
     &[href*='medium.com/'] {
       &::before {
-        background-image: url(/icons/user-link-medium.svg);
+        background-image: url('/icons/user-link-medium.svg');
       }
 
       &:hover {
@@ -343,7 +350,7 @@
 
     &[href*='ok.ru/'] {
       &::before {
-        background-image: url(/icons/user-link-ok.svg);
+        background-image: url('/icons/user-link-ok.svg');
       }
 
       &:hover {
@@ -355,7 +362,7 @@
 
     &[href*='pinterest.com/'] {
       &::before {
-        background-image: url(/icons/user-link-pinterest.svg);
+        background-image: url('/icons/user-link-pinterest.svg');
       }
 
       &:hover {
@@ -367,7 +374,7 @@
 
     &[href*='reddit.com/'] {
       &::before {
-        background-image: url(/icons/user-link-reddit.svg);
+        background-image: url('/icons/user-link-reddit.svg');
       }
 
       &:hover {
@@ -379,7 +386,7 @@
 
     &[href*='tiktok.com/'] {
       &::before {
-        background-image: url(/icons/user-link-tiktok.svg);
+        background-image: url('/icons/user-link-tiktok.svg');
       }
 
       &:hover {
@@ -392,7 +399,7 @@
     &[href*='youtube.com/'],
     &[href*='youtu.be/'] {
       &::before {
-        background-image: url(/icons/user-link-youtube.svg);
+        background-image: url('/icons/user-link-youtube.svg');
       }
 
       &:hover {
@@ -404,7 +411,7 @@
 
     &[href*='dzen.ru/'] {
       &::before {
-        background-image: url(/icons/user-link-dzen.svg);
+        background-image: url('/icons/user-link-dzen.svg');
       }
 
       &:hover {
@@ -413,15 +420,6 @@
         }
       }
     }
-  }
-
-  @include media-breakpoint-down(sm) {
-    flex: 1 100%;
-    justify-content: center;
-  }
-
-  @include media-breakpoint-down(md) {
-    justify-content: center;
   }
 
   a:link {
@@ -434,14 +432,14 @@
 }
 
 .subscribersContainer {
+  @include media-breakpoint-down(md) {
+    justify-content: center;
+  }
+
   display: flex;
   flex-wrap: wrap;
   font-size: 1.4rem;
   gap: 1rem;
   margin-top: 0;
   white-space: nowrap;
-
-  @include media-breakpoint-down(md) {
-    justify-content: center;
-  }
 }

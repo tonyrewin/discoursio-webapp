@@ -1,18 +1,17 @@
-import { getPagePath } from '@nanostores/router'
+import { A } from '@solidjs/router'
 import { clsx } from 'clsx'
 import { Show, createSignal } from 'solid-js'
 import { useEditorHTML } from 'solid-tiptap'
 import Typograf from 'typograf'
+import { Button } from '~/components/_shared/Button'
+import { DarkModeToggle } from '~/components/_shared/DarkModeToggle'
+import { Icon } from '~/components/_shared/Icon'
+import { useEditorContext } from '~/context/editor'
+import { useLocalize } from '~/context/localize'
+import { useUI } from '~/context/ui'
+import { useEscKeyDownHandler } from '~/lib/useEscKeyDownHandler'
+import { useOutsideClickHandler } from '~/lib/useOutsideClickHandler'
 
-import { useEditorContext } from '../../../context/editor'
-import { useLocalize } from '../../../context/localize'
-import { router } from '../../../stores/router'
-import { showModal } from '../../../stores/ui'
-import { useEscKeyDownHandler } from '../../../utils/useEscKeyDownHandler'
-import { useOutsideClickHandler } from '../../../utils/useOutsideClickHandler'
-import { Button } from '../../_shared/Button'
-import { DarkModeToggle } from '../../_shared/DarkModeToggle'
-import { Icon } from '../../_shared/Icon'
 import styles from './Panel.module.scss'
 
 const typograf = new Typograf({ locale: ['ru', 'en-US'] })
@@ -23,25 +22,26 @@ type Props = {
 
 export const Panel = (props: Props) => {
   const { t } = useLocalize()
+  const { showModal } = useUI()
   const {
+    setIsCollabMode,
     isEditorPanelVisible,
     wordCounter,
-    editorRef,
     form,
     toggleEditorPanel,
     saveShout,
     saveDraft,
     publishShout,
+    editing: editor
   } = useEditorContext()
-
-  const containerRef: { current: HTMLElement } = { current: null }
+  const [containerRef, setAsideContainerRef] = createSignal<HTMLElement | undefined>()
   const [isShortcutsVisible, setIsShortcutsVisible] = createSignal(false)
   const [isTypographyFixed, setIsTypographyFixed] = createSignal(false)
 
   useOutsideClickHandler({
-    containerRef,
+    containerRef: containerRef(),
     predicate: () => isEditorPanelVisible(),
-    handler: () => toggleEditorPanel(),
+    handler: () => toggleEditorPanel()
   })
 
   useEscKeyDownHandler(() => {
@@ -59,16 +59,16 @@ export const Panel = (props: Props) => {
     }
   }
 
-  const html = useEditorHTML(() => editorRef.current())
+  const html = useEditorHTML(editor)
 
   const handleFixTypographyClick = () => {
-    editorRef.current().commands.setContent(typograf.execute(html()))
+    editor()?.commands.setContent(typograf.execute(html() || '')) // here too
     setIsTypographyFixed(true)
   }
 
   return (
     <aside
-      ref={(el) => (containerRef.current = el)}
+      ref={setAsideContainerRef}
       class={clsx('col-md-6', styles.Panel, { [styles.hidden]: !isEditorPanelVisible() })}
     >
       <Button
@@ -97,14 +97,21 @@ export const Panel = (props: Props) => {
               {t('Invite co-authors')}
             </span>
           </p>
+          {/* TODO: <Show when={coauthorsCount() > 0}> */}
           <p>
-            <a
+            <span class={styles.link} onClick={() => setIsCollabMode((x) => !x)}>
+              {t('Collaborative mode')}
+            </span>
+          </p>
+          {/*</Show> */}
+          <p>
+            <A
               class={styles.link}
               onClick={() => toggleEditorPanel()}
-              href={getPagePath(router, 'editSettings', { shoutId: props.shoutId.toString() })}
+              href={`/edit/${props.shoutId}/settings`}
             >
               {t('Publication settings')}
-            </a>
+            </A>
           </p>
           <p>
             <span class={styles.link}>{t('Corrections history')}</span>
@@ -163,27 +170,27 @@ export const Panel = (props: Props) => {
       <div class={clsx(styles.actionsHolder, styles.scrolled, { hidden: !isShortcutsVisible() })}>
         <p>
           <button class={styles.backToMenuControl} onClick={() => setIsShortcutsVisible(false)}>
-            {t('back to menu"')}
+            {t('Back to menu"').toLocaleLowerCase()}
           </button>
         </p>
 
         <section class={styles.shortcutList}>
           <p>
-            {t('bold')}
+            {t('Bold').toLocaleLowerCase()}
             <span class={styles.shortcut}>
               <span class={styles.shortcutButton}>Ctrl</span>
               <span class={styles.shortcutButton}>B</span>
             </span>
           </p>
           <p>
-            {t('italic')}
+            {t('Italic').toLocaleLowerCase()}
             <span class={styles.shortcut}>
               <span class={styles.shortcutButton}>Ctrl</span>
               <span class={styles.shortcutButton}>I</span>
             </span>
           </p>
           <p>
-            {t('add link')}
+            {t('Add link').toLocaleLowerCase()}
             <span class={styles.shortcut}>
               <span class={styles.shortcutButton}>Ctrl</span>
               <span class={styles.shortcutButton}>K</span>
@@ -193,7 +200,7 @@ export const Panel = (props: Props) => {
 
         <section class={styles.shortcutList}>
           <p>
-            {t('header 1')}
+            {t('Header 1').toLocaleLowerCase()}
             <span class={styles.shortcut}>
               <span class={styles.shortcutButton}>Ctrl</span>
               <span class={styles.shortcutButton}>Alt</span>
@@ -201,7 +208,7 @@ export const Panel = (props: Props) => {
             </span>
           </p>
           <p>
-            {t('header 2')}
+            {t('Header 2').toLocaleLowerCase()}
             <span class={styles.shortcut}>
               <span class={styles.shortcutButton}>Ctrl</span>
               <span class={styles.shortcutButton}>Alt</span>
@@ -209,7 +216,7 @@ export const Panel = (props: Props) => {
             </span>
           </p>
           <p>
-            {t('header 3')}
+            {t('Header 3').toLocaleLowerCase()}
             <span class={styles.shortcut}>
               <span class={styles.shortcutButton}>Ctrl</span>
               <span class={styles.shortcutButton}>Alt</span>
@@ -244,14 +251,14 @@ export const Panel = (props: Props) => {
 
         <section class={styles.shortcutList}>
           <p>
-            {t('cancel')}
+            {t('Cancel').toLocaleLowerCase()}
             <span class={styles.shortcut}>
               <span class={styles.shortcutButton}>Ctrl</span>
               <span class={styles.shortcutButton}>Z</span>
             </span>
           </p>
           <p>
-            {t('repeat')}
+            {t('Repeat').toLocaleLowerCase()}
             <span class={styles.shortcut}>
               <span class={styles.shortcutButton}>Ctrl</span>
               <span class={styles.shortcutButton}>Shift</span>

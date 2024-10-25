@@ -1,10 +1,9 @@
-import type { Author } from '../../graphql/schema/core.gen'
+import type { Author } from '~/graphql/schema/core.gen'
 
 import { clsx } from 'clsx'
 import { Show, createSignal } from 'solid-js'
-
-import { apiClient } from '../../graphql/client/core'
-
+import { useSession } from '~/context/session'
+import rateAuthorMutation from '~/graphql/mutation/core/author-rate'
 import styles from './AuthorRatingControl.module.scss'
 
 interface AuthorRatingControlProps {
@@ -15,22 +14,29 @@ interface AuthorRatingControlProps {
 export const AuthorRatingControl = (props: AuthorRatingControlProps) => {
   const isUpvoted = false
   const isDownvoted = false
+
+  const { client } = useSession()
+
   // eslint-disable-next-line unicorn/consistent-function-scoping
   const handleRatingChange = async (isUpvote: boolean) => {
     console.log('handleRatingChange', { isUpvote })
     if (props.author?.slug) {
       const value = isUpvote ? 1 : -1
-      await apiClient.rateAuthor({ rated_slug: props.author?.slug, value })
-      setRating((r) => r + value)
+      const _resp = await client()
+        ?.mutation(rateAuthorMutation, {
+          rated_slug: props.author?.slug,
+          value
+        })
+        .toPromise()
+      setRating((r) => (r || 0) + value)
     }
   }
-
   const [rating, setRating] = createSignal(props.author?.stat?.rating)
   return (
     <div
       class={clsx(styles.rating, props.class, {
         [styles.isUpvoted]: isUpvoted,
-        [styles.isDownvoted]: isDownvoted,
+        [styles.isDownvoted]: isDownvoted
       })}
     >
       <button

@@ -1,4 +1,4 @@
-import type { Shout } from '../../graphql/schema/core.gen'
+import type { Shout } from '~/graphql/schema/core.gen'
 
 import { For, Show, createEffect, createSignal } from 'solid-js'
 
@@ -36,7 +36,7 @@ export const Row2 = (props: {
                         isWithCover: props.isEqual || className === 'col-md-16',
                         nodate: props.isEqual || props.nodate,
                         noAuthorLink: props.noAuthorLink,
-                        noauthor: props.noauthor,
+                        noauthor: props.noauthor
                       }}
                       desktopCoverSize={desktopCoverSize}
                     />

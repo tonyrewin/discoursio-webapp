@@ -1,7 +1,7 @@
 import { clsx } from 'clsx'
 import { createSignal, onCleanup, onMount } from 'solid-js'
 
-import { useLocalize } from '../../../context/localize'
+import { useLocalize } from '~/context/localize'
 import { Icon } from '../Icon'
 
 import styles from './DarkModeToggle.module.scss'
@@ -10,48 +10,40 @@ type Props = {
   class?: string
 }
 
-const editorDarkModeSelected = localStorage.getItem('editorDarkMode')
-const editorDarkModeAttr = document.documentElement.getAttribute('editorDarkMode')
-
 export const DarkModeToggle = (props: Props) => {
   const { t } = useLocalize()
-  const [editorDarkMode, setEditorDarkMode] = createSignal(false)
+  const [isDark, setIsDark] = createSignal(false)
 
   onMount(() => {
-    if (editorDarkModeSelected === 'true') {
-      setEditorDarkMode(true)
-      document.documentElement.dataset.editorDarkMode = 'true'
-    } else if (editorDarkModeSelected === 'false') {
-      setEditorDarkMode(false)
-      document.documentElement.dataset.editorDarkMode = 'false'
+    const theme = localStorage?.getItem('theme') || document.documentElement.getAttribute('theme')
+    if (theme === 'dark') {
+      setIsDark(true)
+      document.documentElement.dataset.theme = 'dark'
+    } else if (theme !== 'dark') {
+      setIsDark(false)
+      document.documentElement.dataset.theme = 'light'
     }
 
-    if (!(editorDarkModeAttr || editorDarkModeSelected)) {
-      localStorage.setItem('editorDarkMode', 'false')
-      document.documentElement.dataset.editorDarkMode = 'false'
+    if (!theme) {
+      localStorage?.setItem('theme', 'light')
+      document.documentElement.dataset.theme = 'light'
     }
 
     onCleanup(() => {
-      setEditorDarkMode(false)
-      document.documentElement.dataset.editorDarkMode = undefined
+      setIsDark(false)
+      document.documentElement.dataset.theme = undefined
     })
   })
 
   const handleSwitchTheme = () => {
-    setEditorDarkMode(!editorDarkMode())
-    localStorage.setItem('editorDarkMode', editorDarkMode() ? 'true' : 'false')
-    document.documentElement.dataset.editorDarkMode = editorDarkMode() ? 'true' : 'false'
+    setIsDark(!isDark())
+    localStorage?.setItem('theme', isDark() ? 'dark' : 'light')
+    document.documentElement.dataset.theme = isDark() ? 'dark' : 'light'
   }
 
   return (
     <div class={clsx(styles.DarkModeToggle, props.class)}>
-      <input
-        type="checkbox"
-        id="theme-switcher"
-        value="1"
-        checked={editorDarkMode()}
-        onClick={handleSwitchTheme}
-      />
+      <input type="checkbox" id="theme-switcher" value="1" checked={isDark()} onClick={handleSwitchTheme} />
       <label for="theme-switcher">
         {t('Night mode')}
         <div class={styles.switcher}>

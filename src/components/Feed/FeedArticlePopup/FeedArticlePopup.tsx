@@ -1,12 +1,12 @@
-import type { PopupProps } from '../../_shared/Popup'
+import type { PopupProps } from '~/components/_shared/Popup'
 
 import { clsx } from 'clsx'
 import { Show, createSignal } from 'solid-js'
 
-import { useLocalize } from '../../../context/localize'
-import { Icon } from '../../_shared/Icon'
-import { Popup } from '../../_shared/Popup'
-import { SoonChip } from '../../_shared/SoonChip'
+import { Icon } from '~/components/_shared/Icon'
+import { Popup } from '~/components/_shared/Popup'
+import { SoonChip } from '~/components/_shared/SoonChip'
+import { useLocalize } from '~/context/localize'
 
 import styles from './FeedArticlePopup.module.scss'
 
@@ -33,7 +33,6 @@ export const FeedArticlePopup = (props: Props) => {
           <li>
             <button
               class={styles.action}
-              role="button"
               onClick={() => {
                 props.onShareClick()
                 setHidePopup(true)
@@ -47,7 +46,6 @@ export const FeedArticlePopup = (props: Props) => {
             <li>
               <button
                 class={styles.action}
-                role="button"
                 onClick={() => {
                   alert('Help to edit')
                   setHidePopup(true)
@@ -61,7 +59,6 @@ export const FeedArticlePopup = (props: Props) => {
           <li>
             <button
               class={styles.action}
-              role="button"
               onClick={() => {
                 props.onInviteClick()
                 setHidePopup(false)
@@ -73,7 +70,7 @@ export const FeedArticlePopup = (props: Props) => {
           </li>
           <Show when={!props.canEdit}>
             <li>
-              <button class={clsx(styles.action, styles.soon)} role="button">
+              <button class={clsx(styles.action, styles.soon)}>
                 <Icon name="bell-white" class={styles.icon} />
                 <div class={styles.title}>{t('Subscribe to comments')}</div>
                 <SoonChip />
@@ -81,7 +78,7 @@ export const FeedArticlePopup = (props: Props) => {
             </li>
           </Show>
           <li>
-            <button class={clsx(styles.action, styles.soon)} role="button">
+            <button class={clsx(styles.action, styles.soon)}>
               <Icon name="bookmark" class={styles.icon} />
               <div class={styles.title}>{t('Add to bookmarks')}</div>
               <SoonChip />
@@ -91,19 +88,19 @@ export const FeedArticlePopup = (props: Props) => {
           {/*  <li>*/}
           {/*    <button*/}
           {/*      class={styles.action}*/}
-          {/*      role="button"*/}
+          {/*      */}
           {/*      onClick={() => {*/}
-          {/*        alert('Report')*/}
+          {/*        alert('Complain')*/}
           {/*      }}*/}
           {/*    >*/}
-          {/*      {t('Report')}*/}
+          {/*      {t('Complain')}*/}
           {/*    </button>*/}
           {/*  </li>*/}
           {/*</Show>*/}
           {/*<li>*/}
           {/*  <button*/}
           {/*    class={styles.action}*/}
-          {/*    role="button"*/}
+          {/*    */}
           {/*    onClick={() => {*/}
           {/*      alert('Get notifications')*/}
           {/*    }}*/}

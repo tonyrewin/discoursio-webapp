@@ -1,22 +1,23 @@
+import { makePersisted } from '@solid-primitives/storage'
 import type { Accessor, JSX } from 'solid-js'
-
-import { createStorageSignal } from '@solid-primitives/storage'
 import { createContext, createMemo, createSignal, onMount, useContext } from 'solid-js'
 import { createStore } from 'solid-js/store'
 import { Portal } from 'solid-js/web'
 
+import markSeenMutation from '~/graphql/mutation/notifier/mark-seen'
+import markSeenAfterMutation from '~/graphql/mutation/notifier/mark-seen-after'
+import markSeenThreadMutation from '~/graphql/mutation/notifier/mark-seen-thread'
+import getNotifications from '~/graphql/query/notifier/notifications-load'
+import { NotificationGroup, QueryLoad_NotificationsArgs } from '~/graphql/schema/core.gen'
 import { NotificationsPanel } from '../components/NotificationsPanel'
 import { ShowIfAuthenticated } from '../components/_shared/ShowIfAuthenticated'
-import { notifierClient } from '../graphql/client/notifier'
-import { NotificationGroup, QueryLoad_NotificationsArgs } from '../graphql/schema/core.gen'
-
 import { SSEMessage, useConnect } from './connect'
 import { useSession } from './session'
 
 type NotificationsContextType = {
   notificationEntities: Record<string, NotificationGroup>
   unreadNotificationsCount: Accessor<number>
-  after: Accessor<number>
+  after: Accessor<number | null>
   sortedNotifications: Accessor<NotificationGroup[]>
   loadedNotificationsCount: Accessor<number>
   totalNotificationsCount: Accessor<number>
@@ -29,7 +30,10 @@ type NotificationsContextType = {
 }
 
 export const PAGE_SIZE = 20
-const NotificationsContext = createContext<NotificationsContextType>()
+const NotificationsContext = createContext<NotificationsContextType>({
+  showNotificationsPanel: () => undefined,
+  hideNotificationsPanel: () => undefined
+} as NotificationsContextType)
 
 export function useNotifications() {
   return useContext(NotificationsContext)
@@ -40,20 +44,24 @@ export const NotificationsProvider = (props: { children: JSX.Element }) => {
   const [unreadNotificationsCount, setUnreadNotificationsCount] = createSignal(0)
   const [totalNotificationsCount, setTotalNotificationsCount] = createSignal(0)
   const [notificationEntities, setNotificationEntities] = createStore<Record<string, NotificationGroup>>({})
-  const { author } = useSession()
+  const { session, client } = useSession()
   const { addHandler } = useConnect()
 
-  const loadNotificationsGrouped = async (options: { after: number; limit?: number; offset?: number }) => {
-    if (author()?.id && notifierClient?.private) {
-      const notificationsResult = await notifierClient.getNotifications(options)
-      const groups = notificationsResult?.notifications || []
-      const total = notificationsResult?.total || 0
-      const unread = notificationsResult?.unread || 0
+  const loadNotificationsGrouped = async (options: QueryLoad_NotificationsArgs) => {
+    if (session()?.access_token) {
+      const resp = await client()?.query(getNotifications, options).toPromise()
+      const result = resp?.data?.get_notifications
+      const groups = result?.notifications || []
+      const total = result?.total || 0
+      const unread = result?.unread || 0
 
-      const newGroupsEntries = groups.reduce((acc, group: NotificationGroup) => {
-        acc[group.thread] = group
-        return acc
-      }, {})
+      const newGroupsEntries = groups.reduce(
+        (acc: { [x: string]: NotificationGroup }, group: NotificationGroup) => {
+          acc[group.thread] = group
+          return acc
+        },
+        {}
+      )
 
       setTotalNotificationsCount(total)
       setUnreadNotificationsCount(unread)
@@ -70,20 +78,23 @@ export const NotificationsProvider = (props: { children: JSX.Element }) => {
 
   const now = Math.floor(Date.now() / 1000)
   const loadedNotificationsCount = createMemo(() => Object.keys(notificationEntities).length)
-  const [after, setAfter] = createStorageSignal('notifier_timestamp', now)
+  const [after, setAfter] = makePersisted(createSignal<number>(now), { name: 'notifier_timestamp' })
 
   onMount(() => {
     addHandler((data: SSEMessage) => {
-      if (data.entity === 'reaction' && author()?.id) {
+      if (data.entity === 'reaction' && session()?.access_token) {
         console.info('[context.notifications] event', data)
-        loadNotificationsGrouped({ after: after(), limit: Math.max(PAGE_SIZE, loadedNotificationsCount()) })
+        loadNotificationsGrouped({
+          after: after() || now,
+          limit: Math.max(PAGE_SIZE, loadedNotificationsCount())
+        })
       }
     })
     setAfter(now)
   })
 
   const markSeenThread = async (threadId: string) => {
-    if (notifierClient.private) await notifierClient.markSeenThread(threadId)
+    await client()?.mutation(markSeenThreadMutation, { threadId }).toPromise()
     const thread = notificationEntities[threadId]
     thread.seen = true
     setNotificationEntities((nnn) => ({ ...nnn, [threadId]: thread }))
@@ -91,16 +102,16 @@ export const NotificationsProvider = (props: { children: JSX.Element }) => {
   }
 
   const markSeenAll = async () => {
-    if (author()?.id && notifierClient.private) {
-      await notifierClient.markSeenAfter({ after: after() })
-      await loadNotificationsGrouped({ after: after(), limit: loadedNotificationsCount() })
+    if (session()?.access_token) {
+      const _resp = await client()?.mutation(markSeenAfterMutation, { after: after() }).toPromise()
+      await loadNotificationsGrouped({ after: after() || now, limit: loadedNotificationsCount() })
     }
   }
 
   const markSeen = async (notification_id: number) => {
-    if (author()?.id && notifierClient.private) {
-      await notifierClient.markSeen(notification_id)
-      await loadNotificationsGrouped({ after: after(), limit: loadedNotificationsCount() })
+    if (session()?.access_token) {
+      await client()?.mutation(markSeenMutation, { notification_id }).toPromise()
+      await loadNotificationsGrouped({ after: after() || now, limit: loadedNotificationsCount() })
     }
   }
 
@@ -118,7 +129,7 @@ export const NotificationsProvider = (props: { children: JSX.Element }) => {
     markSeenThread,
     markSeenAll,
     markSeen,
-    loadNotificationsGrouped,
+    loadNotificationsGrouped
   }
 
   const value: NotificationsContextType = {
@@ -128,7 +139,7 @@ export const NotificationsProvider = (props: { children: JSX.Element }) => {
     unreadNotificationsCount,
     loadedNotificationsCount,
     totalNotificationsCount,
-    ...actions,
+    ...actions
   }
 
   const handleNotificationPanelClose = () => {

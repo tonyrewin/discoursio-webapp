@@ -1,4 +1,4 @@
-import type { Shout } from '../../graphql/schema/core.gen'
+import type { Shout } from '~/graphql/schema/core.gen'
 
 import { Show } from 'solid-js'
 
@@ -21,7 +21,7 @@ export const Row1 = (props: {
                 isSingle: true,
                 nodate: props.nodate,
                 noAuthorLink: props.noAuthorLink,
-                noauthor: props.noauthor,
+                noauthor: props.noauthor
               }}
               desktopCoverSize="L"
             />

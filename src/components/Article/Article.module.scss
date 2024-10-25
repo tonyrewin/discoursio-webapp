@@ -1,13 +1,11 @@
 h1 {
-  @include font-size(4rem);
-
+  font-size:4rem;
   line-height: 1.1;
   margin-top: 0.5em;
 }
 
 h2 {
-  @include font-size(4rem);
-
+  font-size:4rem;
   line-height: 1.1;
 }
 
@@ -20,13 +18,23 @@ img {
 }
 
 .articleContent {
-  img:not([data-disable-lightbox='true']) {
+  img:not(.icon) {
     cursor: zoom-in;
     width: 100%;
   }
 }
 
 .shoutBody {
+  @include media-breakpoint-up(sm) {
+    :global(.width-30) {
+      width: 30%;
+    }
+
+    :global(.width-50) {
+      width: 50%;
+    }
+  }
+
   font-size: 1.6rem;
   line-height: 1.6;
 
@@ -65,6 +73,16 @@ img {
 
   blockquote[data-type='quote'],
   ta-quotation {
+    @include media-breakpoint-up(sm) {
+      &[data-float='left'] {
+        margin-right: 1.5em;
+      }
+
+      &[data-float='right'] {
+        margin-left: 1.5em;
+      }
+    }
+
     border: solid #000;
     border-width: 0 0 0 2px;
     clear: both;
@@ -76,23 +94,12 @@ img {
 
     &[data-float='left'],
     &[data-float='right'] {
-      @include font-size(2.2rem);
-
-      line-height: 1.4;
-
       @include media-breakpoint-up(sm) {
         clear: none;
       }
-    }
 
-    @include media-breakpoint-up(sm) {
-      &[data-float='left'] {
-        margin-right: 1.5em;
-      }
-
-      &[data-float='right'] {
-        margin-left: 1.5em;
-      }
+      font-size:2.2rem;
+      line-height: 1.4;
     }
 
     &::before {
@@ -104,18 +111,17 @@ img {
   ta-sub,
   ta-selection-frame,
   ta-border-sub {
-    @include font-size(1.4rem);
+    @include media-breakpoint-up(md) {
+      margin: 3.2rem -8.3333%;
+      padding: 3.2rem 8.3333%;
+    }
 
+    font-size:1.4rem;
     background: #f1f2f3;
     clear: both;
     display: block;
     margin: 3.2rem 0;
     padding: 3.2rem;
-
-    @include media-breakpoint-up(md) {
-      margin: 3.2rem -8.3333%;
-      padding: 3.2rem 8.3333%;
-    }
 
     p:last-child {
       margin-bottom: 0;
@@ -194,16 +200,6 @@ img {
     margin: 0 8.3333% 1.5em 0;
   }
 
-  @include media-breakpoint-up(sm) {
-    :global(.width-30) {
-      width: 30%;
-    }
-
-    :global(.width-50) {
-      width: 50%;
-    }
-  }
-
   :global(.img-align-left.width-50) {
     @include media-breakpoint-up(xl) {
       margin-left: -16.6666%;
@@ -243,7 +239,7 @@ img {
 
 .shoutAuthor,
 .shoutDate {
-  @include font-size(1.5rem);
+  font-size:1.5rem;
 }
 
 .shoutAuthor {
@@ -282,8 +278,7 @@ img {
 }
 
 .writeComment {
-  @include font-size(1.7rem);
-
+  font-size:1.7rem;
   border: 2px solid #f6f6f6;
   outline: none;
   padding: 0.2em 0.4em;
@@ -295,8 +290,7 @@ img {
 }
 
 .commentWarning {
-  @include font-size(2.2rem);
-
+  font-size:2.2rem;
   background: #f6f6f6;
   margin-bottom: 1em;
   padding: 2.4rem 1.8rem;
@@ -313,30 +307,29 @@ img {
 }
 
 .shoutStats {
+  @include media-breakpoint-down(lg) {
+    flex-wrap: wrap;
+  }
+
   border-top: 4px solid #000;
   display: flex;
   justify-content: flex-start;
   padding: 3rem 0 0;
   position: relative;
-
-  @include media-breakpoint-down(lg) {
-    flex-wrap: wrap;
-  }
 }
 
 .shoutStatsItem {
-  @include font-size(1.5rem);
+  @include media-breakpoint-up(xl) {
+    margin-right: 3.2rem;
+  }
 
+  font-size:1.5rem;
   align-items: center;
   font-weight: 500;
   display: flex;
   margin: 0 2rem 1em 0;
   vertical-align: baseline;
   cursor: pointer;
-
-  @include media-breakpoint-up(xl) {
-    margin-right: 3.2rem;
-  }
 
   .icon {
     display: inline-block;
@@ -379,11 +372,11 @@ img {
 }
 
 .shoutStatsItemBookmarks {
-  margin-left: auto;
-
   @include media-breakpoint-up(lg) {
     margin-left: 0;
   }
+
+  margin-left: auto;
 }
 
 .shoutStatsItemInner {
@@ -408,6 +401,15 @@ img {
 }
 
 .shoutStatsItemAdditionalData {
+  @include media-breakpoint-down(lg) {
+    flex: 1 100%;
+    order: 9;
+
+    .shoutStatsItemAdditionalDataItem {
+      margin-left: 0;
+    }
+  }
+
   color: rgb(0 0 0 / 40%);
   cursor: default;
   font-weight: normal;
@@ -418,24 +420,9 @@ img {
     opacity: 0.4;
     height: 2rem;
   }
-
-  @include media-breakpoint-down(lg) {
-    flex: 1 100%;
-    order: 9;
-
-    .shoutStatsItemAdditionalDataItem {
-      margin-left: 0;
-    }
-  }
 }
 
 .shoutStatsItemViews {
-  color: rgb(0 0 0 / 40%);
-  cursor: default;
-  font-weight: normal;
-  margin-left: auto;
-  white-space: nowrap;
-
   @include media-breakpoint-down(lg) {
     bottom: 0;
     flex: 1 40%;
@@ -449,6 +436,12 @@ img {
       display: none !important;
     }
   }
+
+  color: rgb(0 0 0 / 40%);
+  cursor: default;
+  font-weight: normal;
+  margin-left: auto;
+  white-space: nowrap;
 }
 
 .shoutStatsItemLabel {
@@ -457,11 +450,11 @@ img {
 }
 
 .commentsTextLabel {
-  display: none;
-
   @include media-breakpoint-up(sm) {
     display: block;
   }
+
+  display: none;
 }
 
 .shoutStatsItemCount {
@@ -471,6 +464,12 @@ img {
 }
 
 .shoutStatsItemAdditionalDataItem {
+  @include media-breakpoint-down(sm) {
+    &:first-child {
+      margin-left: 0;
+    }
+  }
+
   font-weight: normal;
   display: inline-block;
 
@@ -478,17 +477,10 @@ img {
   margin-right: 0;
   margin-bottom: 0;
   cursor: default;
-
-  @include media-breakpoint-down(sm) {
-    &:first-child {
-      margin-left: 0;
-    }
-  }
 }
 
 .topicsList {
-  @include font-size(1.2rem);
-
+  font-size:1.2rem;
   border-bottom: 1px solid #e8e8e8;
   letter-spacing: 0.08em;
   margin-top: 1.6rem;
@@ -535,8 +527,7 @@ img {
 }
 
 .commentsHeader {
-  @include font-size(2.4rem);
-
+  font-size: 2.4rem;
   margin-bottom: 1em;
 
   .newReactions {
@@ -569,8 +560,7 @@ img {
   padding-bottom: 3.2rem;
 
   button {
-    @include font-size(1.5rem);
-
+    font-size:1.5rem;
     border-radius: 0.8rem;
     margin-right: 1.2rem;
     padding: 0.9rem 1.2rem;
@@ -620,8 +610,7 @@ a[data-toggle='tooltip'] {
 }
 
 .tooltip {
-  @include font-size(1.4rem);
-
+  font-size:1.4rem;
   position: relative;
   padding: 8px;
   border-radius: 4px;
@@ -658,8 +647,7 @@ a[data-toggle='tooltip'] {
 }
 
 .lead {
-  @include font-size(1.8rem);
-
+  font-size:1.8rem;
   font-weight: 600;
 
   b,
@@ -682,4 +670,8 @@ a[data-toggle='tooltip'] {
       display: inline-block;
     }
   }
+}
+
+.figureAlignColumn {
+  clear: both;
 }

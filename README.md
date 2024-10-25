@@ -1,52 +1,68 @@
+# Discoursio Webapp
 
-## How to start  
+## Технологический стек
+
+- [TypeScript](https://www.typescriptlang.org/)
+- [SolidJS](https://www.solidjs.com/)
+- [Solid Start](https://start.solidjs.com/)
+- [Vinxi](https://vinxi.vercel.app/)
+- [SCSS](https://sass-lang.com/)
+- [URQL](https://formidable.com/open-source/urql/)
+- [i18next](https://www.i18next.com/)
+- [Tiptap](https://tiptap.dev/)
+- [Playwright](https://playwright.dev/)
+- [Storybook](https://storybook.js.org/)
+- [Stylelint](https://stylelint.io/)
+- [Biome](https://biomejs.dev/)
+
+## Разработка
+
+### Начало работы
+
+1. Клонируйте репозиторий
+2. Установите зависимости: `bun i` (или npm/pnpm/yarn)
+3. Создайте `.env` файл (переменные с `PUBLIC_` используются в `/src/utils/config.ts`)
+
+### Installing cert server on local
+
+1. Install mkcert:
 ```
-npm install
-npm start
+sudo apt install libnss3-tools
+curl -JLO "https://dl.filippo.io/mkcert/latest?for=linux/amd64"
+chmod +x mkcert-v*-linux-amd64
+sudo mv mkcert-v*-linux-amd64 /usr/local/bin/mkcert
+```
+2. Create a local CA (Certificate Authority):
+```
+mkcert -install
+```
+3. After installing mkcert, you should be able to run your development server:
+```
+bun dev
 ```
 
-## Useful commands  
-run checks  
-```
-npm run check
-```
-type checking with watch
-```
-npm run typecheck:watch
-```
-fix styles, imports, formatting and autofixable linting errors:
-```
-npm run fix
-npm run format
+### Основные команды
+
+```bash
+bun run dev         # Запуск сервера разработки
+bun run build       # Сборка для продакшена
+bun run typecheck   # Проверка типов
+bun run fix         # Исправление стилей и линтинг
+bun run storybook   # Запуск Storybook
 ```
 
-## Config of variables
+## Тестирование
 
-- All vars are already in place and wroted in   
-    ```
-    /src/utils/config.ts
-    ```
+### E2E тесты (Playwright)
 
-# End-to-End (E2E) Tests
+```bash
+bun run e2e:install  # Установка зависимостей для E2E
+bun run e2e:tests    # Запуск тестов
+bun run e2e:tests:ci # Запуск тестов в CI
+```
 
-This directory contains end-to-end tests. These tests are written using [Playwright](https://playwright.dev/)
+## CI/CD
 
-## Structure
+Тесты выполняются в GitHub Actions. Убедитесь, что `BASE_URL` корректно настроен в CI.
 
-- `/tests/*`: This directory contains the test files.
-- `/playwright.config.ts`: This is the configuration file for Playwright.
-
-## Getting Started
-
-Follow these steps:
-
-1. **Install dependencies**: Run `pnpm e2e:install` to install the necessary dependencies for running the tests.
-
-2. **Run the tests**: After using `pnpm e2e:tests`.
-
-## Additional Information
-
-If workers is no needed use:
-- `npx playwright test --project=webkit --workers 4`
-
-For more information on how to write tests using Playwright - [Playwright documentation](https://playwright.dev/docs/intro).
+## Версия: 0.9.7

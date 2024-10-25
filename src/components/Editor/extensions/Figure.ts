@@ -12,7 +12,7 @@ export const Figure = Node.create({
   name: 'figure',
   addOptions() {
     return {
-      HTMLAttributes: {},
+      HTMLAttributes: { class: 'figure' }
     }
   },
   group: 'block',
@@ -24,10 +24,10 @@ export const Figure = Node.create({
   addAttributes() {
     return {
       'data-float': null,
-      'data-type': { default: null },
+      'data-type': { default: null }
     }
   },
-
+  // @ts-ignore FIXME: why
   parseHTML() {
     return [
       {
@@ -38,15 +38,15 @@ export const Figure = Node.create({
           }
           const img = node.querySelector('img')
           const iframe = node.querySelector('iframe')
-          let dataType = null
+          let dataType: string | undefined
           if (img) {
             dataType = 'image'
           } else if (iframe) {
             dataType = 'iframe'
           }
           return { 'data-type': dataType }
-        },
-      },
+        }
+      }
     ]
   },
   renderHTML({ HTMLAttributes }) {
@@ -69,10 +69,10 @@ export const Figure = Node.create({
                 event.preventDefault()
               }
               return false
-            },
-          },
-        },
-      }),
+            }
+          }
+        }
+      })
     ]
   },
 
@@ -82,7 +82,7 @@ export const Figure = Node.create({
         (value) =>
         ({ commands }) => {
           return commands.updateAttributes(this.name, { 'data-float': value })
-        },
+        }
     }
-  },
+  }
 })

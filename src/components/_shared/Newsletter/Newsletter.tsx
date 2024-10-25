@@ -1,8 +1,8 @@
 import { JSX, Show, createSignal } from 'solid-js'
 
-import { useLocalize } from '../../../context/localize'
-import { useSnackbar } from '../../../context/snackbar'
-import { validateEmail } from '../../../utils/validateEmail'
+import { useLocalize } from '~/context/localize'
+import { useSnackbar } from '~/context/ui'
+import { validateEmail } from '~/utils/validate'
 import { Button } from '../Button'
 import { Icon } from '../Icon'
 
@@ -16,7 +16,7 @@ export const Newsletter = (props: Props) => {
 
   const [title, setTitle] = createSignal('')
   const [email, setEmail] = createSignal('')
-  const [emailError, setEmailError] = createSignal<string>(null)
+  const [emailError, setEmailError] = createSignal<string>('')
   const { showSnackbar } = useSnackbar()
 
   const validate = (): boolean => {
@@ -30,12 +30,12 @@ export const Newsletter = (props: Props) => {
       return false
     }
 
-    setEmailError(null)
+    setEmailError('')
     return true
   }
 
   const handleInput: JSX.ChangeEventHandlerUnion<HTMLInputElement, Event> = (event) => {
-    setEmailError(null)
+    setEmailError('')
     setEmail(event.target.value)
   }
 
@@ -44,14 +44,14 @@ export const Newsletter = (props: Props) => {
 
     if (!validate()) return
 
-    setTitle(t('subscribing...'))
+    setTitle(t('Subscribing...'))
 
     const requestOptions = {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ email: email() }),
+      body: JSON.stringify({ email: email() })
     }
 
     const response = await fetch('/api/newsletter', requestOptions)
@@ -106,7 +106,7 @@ export const Newsletter = (props: Props) => {
               <Icon name="arrow-right" />
             </button>
           </div>
-          <div class="description">Подпишитесь на&nbsp;рассылку лучших публикаций</div>
+          <div class="description">{t('Subscribe to the best publications newsletter')}</div>
         </Show>
         <Show when={emailError()}>
           <div class={styles.error}>{emailError()}</div>
