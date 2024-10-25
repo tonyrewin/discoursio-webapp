@@ -12,20 +12,12 @@
       background: var(--background-color-invert);
       color: rgb(255 255 255 / 40%);
     }
-
-    :global(.button--primary) {
-
-    }
   }
 
   &.secondary {
     &:disabled {
       border: 0.2rem solid #696969;
       color: #696969;
-    }
-
-    :global(.button--secondary) {
-
     }
   }
 
@@ -34,20 +26,12 @@
       background: #f7f7f8;
       color: #9fa1a7;
     }
-
-    :global(.button--square-primary) {
-
-    }
   }
 
   &.secondary-square  {
     &:disabled {
       background: #f7f7f8;
       color: #9fa1a7;
-    }
-
-    :global(.button--square-secondary) {
-
     }
   }
 

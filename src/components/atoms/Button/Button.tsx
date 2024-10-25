@@ -1,10 +1,16 @@
-import { createSignal, JSX } from 'solid-js'
+import { JSX, createSignal } from 'solid-js'
 
 import { clsx } from 'clsx'
 
 import styles from './Button.module.scss'
 
-export type ButtonVariant = 'primary' | 'secondary' | 'primary-square' | 'secondary-square' | 'subscribeButton' | 'unsubscribeButton'
+export type ButtonVariant =
+  | 'primary'
+  | 'secondary'
+  | 'primary-square'
+  | 'secondary-square'
+  | 'subscribeButton'
+  | 'unsubscribeButton'
 type Props = {
   title?: string
   value: string | JSX.Element
@@ -20,10 +26,10 @@ type Props = {
 }
 
 export const Button = (props: Props) => {
-  const [loading, setLoading] = createSignal(props.loading || false)
+  const [loading, setLoading] = createSignal(Boolean(props.loading))
 
   const handleClick = (event: MouseEvent) => {
-    if(loading() || props.loading) return;
+    if (loading() || props.loading) return
     setLoading(true)
 
     props.onClick?.(event)
@@ -58,9 +64,9 @@ export const Button = (props: Props) => {
       disabled={isLoading || props.disabled}
       class={clsx(
         styles.button,
-        styles[props.size ?? 'M'],
-        styles[props.variant ?? 'primary'],
         {
+          [styles['M']]: Boolean(props.size === 'M'),
+          [styles['primary']]: Boolean(props.variant === 'primary'),
           [styles['loadingDots']]: isLoading,
           [styles.subscribeButton]: props.isSubscribeButton,
 
@@ -77,4 +83,3 @@ export const Button = (props: Props) => {
     </button>
   )
 }
-
