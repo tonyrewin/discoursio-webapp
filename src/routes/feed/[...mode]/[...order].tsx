@@ -1,4 +1,5 @@
 import { RouteDefinition, RouteSectionProps, useSearchParams } from '@solidjs/router'
+import { Client } from '@urql/core'
 import { createEffect, createMemo } from 'solid-js'
 
 import { AUTHORS_PER_PAGE } from '~/components/Views/AllAuthorsView'
@@ -13,8 +14,7 @@ import { useTopics } from '~/context/topics'
 import {
   loadCoauthoredShouts,
   loadDiscussedShouts,
-  loadFollowedShouts,
-  loadUnratedShouts
+  loadFollowedShouts
 } from '~/graphql/api/private'
 
 import { loadShouts } from '~/graphql/api/public'
@@ -26,13 +26,6 @@ const privateFeeds = {
   followed: loadFollowedShouts,
   discussed: loadDiscussedShouts,
   coauthored: loadCoauthoredShouts
-}
-
-const publicFeeds = {
-  recent: loadShouts,
-  featured: ({ offset, limit }: LoadShoutsOptions) =>
-    loadShouts({ limit, offset, filters: { featured: true } }),
-  hot: ({ offset, limit }: LoadShoutsOptions) => loadShouts({ limit, offset, order_by: 'last_comment_at' })
 }
 
 const fetchTopics = async () => {
@@ -79,7 +72,7 @@ export default (props: RouteSectionProps<{ shouts: Shout[]; topics: Topic[] }>) 
 
   // load more feed
   const loadMoreShouts = async (offset?: number) => {
-    const gqlHandler = feeds[mode() as keyof typeof feeds]
+    const gqlHandler = privateFeeds[mode() as keyof typeof privateFeeds]
 
     // /feed/:mode:/:order: - select order setting
     const options: LoadShoutsOptions = {
