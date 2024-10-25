@@ -11,20 +11,15 @@ import { useLocalize } from '~/context/localize'
 import { ReactionsProvider } from '~/context/reactions'
 import { useSession } from '~/context/session'
 import { useTopics } from '~/context/topics'
-import {
-  loadCoauthoredShouts,
-  loadDiscussedShouts,
-  loadFollowedShouts,
-  loadUnratedShouts
-} from '~/graphql/api/private'
+import { loadCoauthoredShouts, loadDiscussedShouts, loadFollowedShouts } from '~/graphql/api/private'
+import { loadShouts } from '~/graphql/api/public'
 import { LoadShoutsOptions, Shout, Topic } from '~/graphql/schema/core.gen'
 import { FromPeriod, getFromDate } from '~/lib/fromPeriod'
 
 const feeds = {
   followed: loadFollowedShouts,
   discussed: loadDiscussedShouts,
-  coauthored: loadCoauthoredShouts,
-  unrated: loadUnratedShouts
+  coauthored: loadCoauthoredShouts
 }
 
 export type FeedSearchParams = { period?: FromPeriod }
@@ -33,7 +28,7 @@ export default (props: RouteSectionProps<{ shouts: Shout[]; topics: Topic[] }>) 
   const [searchParams] = useSearchParams<FeedSearchParams>() // ?period=month
   const { t } = useLocalize()
   const { setFeed, feed } = useFeed()
-  const { client } = useSession()
+  const { client, session } = useSession()
 
   // preload all topics
   const { addTopics, sortedTopics } = useTopics()
@@ -55,8 +50,8 @@ export default (props: RouteSectionProps<{ shouts: Shout[]; topics: Topic[] }>) 
     )
   })
 
-  // load more my feed
-  const loadMoreMyFeed = async (offset?: number) => {
+  // load more feed
+  const loadMoreShouts = async (offset?: number) => {
     const gqlHandler = feeds[mode() as keyof typeof feeds]
 
     // /feed/:mode:/:order: - select order setting
@@ -74,10 +69,12 @@ export default (props: RouteSectionProps<{ shouts: Shout[]; topics: Topic[] }>) 
     if (!client()) {
       throw new Error('API client not connected')
     }
-    const shoutsLoader = gqlHandler(client() as Client, options)
-    const loaded = await shoutsLoader()
+    const shoutsLoader = session()?.access_token
+      ? gqlHandler?.(client() as Client, options)
+      : loadShouts(options)
+    const loaded = await shoutsLoader?.()
     loaded && setFeed((prev: Shout[]) => [...prev, ...loaded] as Shout[])
-    return loaded as LoadMoreItems
+    return (loaded || []) as LoadMoreItems
   }
 
   return (
@@ -87,7 +84,7 @@ export default (props: RouteSectionProps<{ shouts: Shout[]; topics: Topic[] }>) 
       key="feed"
       desc="Independent media project about culture, science, art and society with horizontal editing"
     >
-      <LoadMoreWrapper loadFunction={loadMoreMyFeed} pageSize={AUTHORS_PER_PAGE}>
+      <LoadMoreWrapper loadFunction={loadMoreShouts} pageSize={AUTHORS_PER_PAGE}>
         <ReactionsProvider>
           <FeedView
             shouts={feed() || []}
