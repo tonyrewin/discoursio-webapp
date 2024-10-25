@@ -92,7 +92,6 @@ export const AuthorView = (props: AuthorViewProps) => {
 
     // Only append if there are new shouts
     if (newShouts.length > 0) {
-
       // Append only if new batches differ from old ones
       const batches = appendShoutsToBatches(newShouts)
 
