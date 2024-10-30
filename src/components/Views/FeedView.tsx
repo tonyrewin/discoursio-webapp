@@ -15,7 +15,6 @@ import { useTopics } from '~/context/topics'
 import { useUI } from '~/context/ui'
 import { loadUnratedShouts } from '~/graphql/api/private'
 import { type Author, type Reaction, ReactionKind, type Shout } from '~/graphql/schema/core.gen'
-import { FeedSearchParams } from '~/routes/feed/[...order]'
 import { byCreated } from '~/utils/sort'
 import { CommentDate } from '../Article/CommentDate'
 import { getShareUrl } from '../Article/SharePopup'
@@ -64,7 +63,7 @@ export const FeedView = (props: FeedProps) => {
   const { topTopics } = useTopics()
   const { topAuthors } = useAuthors()
   const [topComments, setTopComments] = createSignal<Reaction[]>([])
-  const [searchParams, changeSearchParams] = useSearchParams<FeedSearchParams>()
+  const [searchParams, changeSearchParams] = useSearchParams<{ period: string }>()
   const loadTopComments = async () => {
     const comments = await loadReactionsBy({ by: { kinds: [ReactionKind.Comment] }, limit: 50 })
     setTopComments(comments.sort(byCreated).reverse())
