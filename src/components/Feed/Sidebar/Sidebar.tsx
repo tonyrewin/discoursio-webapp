@@ -1,12 +1,13 @@
-import { A, useLocation, useParams } from '@solidjs/router'
+import { A, useParams } from '@solidjs/router'
 import { clsx } from 'clsx'
-import { For, Show, createSignal } from 'solid-js'
+import { For, Show, createMemo, createSignal } from 'solid-js'
 import { Icon } from '~/components/_shared/Icon'
 import { useFeed } from '~/context/feed'
 import { useFollowing } from '~/context/following'
 import { useLocalize } from '~/context/localize'
 import { Author } from '~/graphql/schema/core.gen'
 import { Userpic } from '../../Author/Userpic'
+
 import styles from './Sidebar.module.scss'
 
 export const Sidebar = () => {
@@ -14,8 +15,9 @@ export const Sidebar = () => {
   const { follows } = useFollowing()
   const { feedByTopic, feedByAuthor, seen } = useFeed()
   const [isSubscriptionsVisible, setSubscriptionsVisible] = createSignal(true)
-  const loc = useLocation()
   const params = useParams()
+  const selected = createMemo(() => params.mode || 'all')
+
   const checkTopicIsSeen = (topicSlug: string) => {
     return feedByTopic()[topicSlug]?.every((article) => Boolean(seen()[article.slug]))
   }
@@ -31,7 +33,7 @@ export const Sidebar = () => {
           <A
             href={'/feed'}
             class={clsx({
-              [styles.selected]: !loc.pathname.includes('feed/my')
+              [styles.selected]: selected() === 'all'
             })}
           >
             <span class={styles.sidebarItemName}>
@@ -42,9 +44,9 @@ export const Sidebar = () => {
         </li>
         <li>
           <A
-            href={'/feed/my/followed'}
+            href={'/feed/followed'}
             class={clsx({
-              [styles.selected]: !params.mode || params.mode === 'followed'
+              [styles.selected]: selected() === 'followed'
             })}
           >
             <span class={styles.sidebarItemName}>
@@ -55,9 +57,9 @@ export const Sidebar = () => {
         </li>
         <li>
           <A
-            href={'/feed/my/coauthored'}
+            href={'/feed/coauthored'}
             class={clsx({
-              [styles.selected]: params.mode === 'coauthored'
+              [styles.selected]: selected() === 'coauthored'
             })}
           >
             <span class={styles.sidebarItemName}>
@@ -68,7 +70,7 @@ export const Sidebar = () => {
         </li>
         <li>
           <a
-            href={'/feed/my/discussed'}
+            href={'/feed/discussed'}
             class={clsx({
               [styles.selected]: params.mode === 'discussed'
             })}

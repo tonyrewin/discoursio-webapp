@@ -3,6 +3,7 @@ import { defaultClient } from '~/graphql/client'
 import getShoutQuery from '~/graphql/query/core/article-load'
 import loadShoutsByQuery from '~/graphql/query/core/articles-load-by'
 import loadShoutsSearchQuery from '~/graphql/query/core/articles-load-search'
+import loadShoutsUnratedQuery from '~/graphql/query/core/articles-load-unrated'
 import getAuthorQuery from '~/graphql/query/core/author-by'
 import loadAuthorsAllQuery from '~/graphql/query/core/authors-all'
 import loadAuthorsByQuery from '~/graphql/query/core/authors-load-by'
@@ -17,6 +18,7 @@ import {
   QueryLoad_Authors_ByArgs,
   QueryLoad_Reactions_ByArgs,
   QueryLoad_Shouts_SearchArgs,
+  QueryLoad_Shouts_UnratedArgs,
   Reaction,
   Shout,
   Topic
@@ -62,7 +64,7 @@ export const loadReactions = (options: QueryLoad_Reactions_ByArgs) => {
     console.debug(options)
     throw new Error('[api] wrong loadReactions call')
   }
-  const kind = options.by?.comment ? 'comments' : options.by?.rating ? 'votes' : 'reactions'
+  const kind = (options.by.kinds || []).join('-')
   const allorone = options.by?.shout ? `shout-${options.by.shout}` : 'all'
   const page = `${options.offset || 0}-${(options?.limit || 0) + (options.offset || 0)}`
   const filter = new URLSearchParams(options.by as Record<string, string>)
@@ -113,4 +115,13 @@ export const loadFollowersByTopic = (slug: string) => {
     const result = resp?.data?.get_topic_followers
     if (result) return result as Author[]
   }, `topic-${slug}`)
+}
+
+export const loadUnratedShouts = (options: QueryLoad_Shouts_UnratedArgs) => {
+  const page = `${options.offset || 0}-${(options?.limit || 0) + (options.offset || 0)}`
+  return cache(async () => {
+    const resp = await defaultClient.query(loadShoutsUnratedQuery, { ...options }).toPromise()
+    const result = resp?.data?.load_shouts_unrated
+    if (result) return result as Shout[]
+  }, `shouts-unrated-${page}`)
 }
