@@ -1,12 +1,13 @@
 import { A, useParams } from '@solidjs/router'
 import { clsx } from 'clsx'
-import { For, Show, createSignal } from 'solid-js'
+import { For, Show, createMemo, createSignal } from 'solid-js'
 import { Icon } from '~/components/_shared/Icon'
 import { useFeed } from '~/context/feed'
 import { useFollowing } from '~/context/following'
 import { useLocalize } from '~/context/localize'
 import { Author } from '~/graphql/schema/core.gen'
 import { Userpic } from '../../Author/Userpic'
+
 import styles from './Sidebar.module.scss'
 
 export const Sidebar = () => {
@@ -15,6 +16,8 @@ export const Sidebar = () => {
   const { feedByTopic, feedByAuthor, seen } = useFeed()
   const [isSubscriptionsVisible, setSubscriptionsVisible] = createSignal(true)
   const params = useParams()
+  const selected = createMemo(() => params.mode || 'all')
+
   const checkTopicIsSeen = (topicSlug: string) => {
     return feedByTopic()[topicSlug]?.every((article) => Boolean(seen()[article.slug]))
   }
@@ -30,7 +33,7 @@ export const Sidebar = () => {
           <A
             href={'/feed'}
             class={clsx({
-              [styles.selected]: !params.mode || ['all', 'hot', 'recent'].includes(params.mode)
+              [styles.selected]: selected() === 'all'
             })}
           >
             <span class={styles.sidebarItemName}>
@@ -43,7 +46,7 @@ export const Sidebar = () => {
           <A
             href={'/feed/followed'}
             class={clsx({
-              [styles.selected]: !params.mode || params.mode === 'followed'
+              [styles.selected]: selected() === 'followed'
             })}
           >
             <span class={styles.sidebarItemName}>
@@ -56,7 +59,7 @@ export const Sidebar = () => {
           <A
             href={'/feed/coauthored'}
             class={clsx({
-              [styles.selected]: params.mode === 'coauthored'
+              [styles.selected]: selected() === 'coauthored'
             })}
           >
             <span class={styles.sidebarItemName}>
