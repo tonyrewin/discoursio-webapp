@@ -1,6 +1,7 @@
 import { RouteSectionProps, useSearchParams } from '@solidjs/router'
 import { createEffect, createMemo } from 'solid-js'
 
+import { Client } from '@urql/core'
 import { AUTHORS_PER_PAGE } from '~/components/Views/AllAuthorsView'
 import { FeedProps, FeedView } from '~/components/Views/FeedView'
 import { LoadMoreItems, LoadMoreWrapper } from '~/components/_shared/LoadMoreWrapper'
@@ -10,33 +11,24 @@ import { useLocalize } from '~/context/localize'
 import { ReactionsProvider } from '~/context/reactions'
 import { useSession } from '~/context/session'
 import { useTopics } from '~/context/topics'
-import {
-  loadCoauthoredShouts,
-  loadDiscussedShouts,
-  loadFollowedShouts,
-  loadUnratedShouts
-} from '~/graphql/api/private'
+import { loadCoauthoredShouts, loadDiscussedShouts, loadFollowedShouts } from '~/graphql/api/private'
+import { loadShouts } from '~/graphql/api/public'
 import { LoadShoutsOptions, Shout, Topic } from '~/graphql/schema/core.gen'
 import { FromPeriod, getFromDate } from '~/lib/fromPeriod'
 
 const feeds = {
   followed: loadFollowedShouts,
   discussed: loadDiscussedShouts,
-  coauthored: loadCoauthoredShouts,
-  unrated: loadUnratedShouts
+  coauthored: loadCoauthoredShouts
 }
+
 export type FeedSearchParams = { period?: FromPeriod }
-
-// /feed/my/followed/hot
-
-const paramModePattern = /^(followed|discussed|liked|coauthored|unrated)$/
-const paramOrderPattern = /^(hot|likes)$/
 
 export default (props: RouteSectionProps<{ shouts: Shout[]; topics: Topic[] }>) => {
   const [searchParams] = useSearchParams<FeedSearchParams>() // ?period=month
   const { t } = useLocalize()
   const { setFeed, feed } = useFeed()
-  const { client } = useSession()
+  const { client, session } = useSession()
 
   // preload all topics
   const { addTopics, sortedTopics } = useTopics()
@@ -44,14 +36,13 @@ export default (props: RouteSectionProps<{ shouts: Shout[]; topics: Topic[] }>) 
     !sortedTopics() && props.data.topics && addTopics(props.data.topics)
   })
 
-  // /feed/my/:mode:
-  const mode = createMemo(() => {
-    return props.params.mode && paramModePattern.test(props.params.mode) ? props.params.mode : 'followed'
-  })
+  // /feed/:mode:
+  const mode = createMemo(() => props.params.mode || 'recent')
 
+  // /feed/:mode/:order
   const order = createMemo(() => {
     return (
-      (paramOrderPattern.test(props.params.order)
+      (['recent', 'hot', 'likes'].includes(props.params.order)
         ? props.params.order === 'hot'
           ? 'last_comment'
           : props.params.order
@@ -59,11 +50,11 @@ export default (props: RouteSectionProps<{ shouts: Shout[]; topics: Topic[] }>) 
     )
   })
 
-  // load more my feed
-  const loadMoreMyFeed = async (offset?: number) => {
+  // load more feed
+  const loadMoreShouts = async (offset?: number) => {
     const gqlHandler = feeds[mode() as keyof typeof feeds]
 
-    // /feed/my/:mode:/:order: - select order setting
+    // /feed/:mode:/:order: - select order setting
     const options: LoadShoutsOptions = {
       limit: 20,
       offset,
@@ -75,11 +66,15 @@ export default (props: RouteSectionProps<{ shouts: Shout[]; topics: Topic[] }>) 
       const period = searchParams?.period || 'month'
       options.filters = { after: getFromDate(period as FromPeriod) }
     }
-
-    const shoutsLoader = gqlHandler(client(), options)
-    const loaded = await shoutsLoader()
-    loaded && setFeed((prev: Shout[]) => [...prev, ...loaded])
-    return loaded as LoadMoreItems
+    if (!client()) {
+      throw new Error('API client not connected')
+    }
+    const shoutsLoader = session()?.access_token
+      ? gqlHandler?.(client() as Client, options)
+      : loadShouts(options)
+    const loaded = await shoutsLoader?.()
+    loaded && setFeed((prev: Shout[]) => [...prev, ...loaded] as Shout[])
+    return (loaded || []) as LoadMoreItems
   }
 
   return (
@@ -89,7 +84,7 @@ export default (props: RouteSectionProps<{ shouts: Shout[]; topics: Topic[] }>) 
       key="feed"
       desc="Independent media project about culture, science, art and society with horizontal editing"
     >
-      <LoadMoreWrapper loadFunction={loadMoreMyFeed} pageSize={AUTHORS_PER_PAGE}>
+      <LoadMoreWrapper loadFunction={loadMoreShouts} pageSize={AUTHORS_PER_PAGE}>
         <ReactionsProvider>
           <FeedView
             shouts={feed() || []}
