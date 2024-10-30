@@ -4,7 +4,13 @@ import { clsx } from 'clsx'
 
 import styles from './Button.module.scss'
 
-export type ButtonVariant = 'primary' | 'secondary' | 'primary-square' | 'secondary-square' | 'subscribeButton' | 'unsubscribeButton'
+export type ButtonVariant =
+  | 'primary'
+  | 'secondary'
+  | 'primary-square'
+  | 'secondary-square'
+  | 'subscribeButton'
+  | 'unsubscribeButton'
 type Props = {
   title?: string
   value: string | JSX.Element
@@ -20,7 +26,7 @@ type Props = {
 }
 
 export const Button = (props: Props) => {
-  const [loading, setLoading] = createSignal<boolean>(Boolean(props.loading))
+  const [loading, setLoading] = createSignal(Boolean(props.loading))
 
   const handleClick = (event: MouseEvent) => {
     if (loading() || props.loading) return
@@ -58,9 +64,9 @@ export const Button = (props: Props) => {
       disabled={isLoading || props.disabled}
       class={clsx(
         styles.button,
-        styles[props.size ?? 'M'],
-        styles[(props.variant ?? 'primary') as keyof typeof styles],
         {
+          [styles['M']]: Boolean(props.size === 'M'),
+          [styles['primary']]: Boolean(props.variant === 'primary'),
           [styles['loadingDots']]: isLoading,
           [styles.subscribeButton]: props.isSubscribeButton,
 
