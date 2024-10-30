@@ -282,6 +282,20 @@ export const AuthorView = (props: AuthorViewProps) => {
     )
   )
 
+  // ffect: Reset sortedFeed When Author Slug Changes**
+  createEffect(
+    on(
+      () => props.authorSlug,
+      (newSlug, prevSlug) => {
+        if (newSlug !== prevSlug) {
+          setSortedFeed([]) // Reset sortedFeed to prevent shouts from previous author
+          setShoutBatches([]) // Reset shoutBatches as well
+        }
+      },
+      {}
+    )
+  )
+
   return (
     <div class={styles.authorPage}>
       <div class="wide-container">
