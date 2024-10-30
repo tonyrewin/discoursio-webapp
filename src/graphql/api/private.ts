@@ -4,25 +4,8 @@ import loadShoutsBookmarkedQuery from '~/graphql/query/core/articles-load-bookma
 import loadShoutsCoauthoredQuery from '~/graphql/query/core/articles-load-coauthored'
 import loadShoutsDiscussedQuery from '~/graphql/query/core/articles-load-discussed'
 import loadShoutsFollowedQuery from '~/graphql/query/core/articles-load-followed'
-import loadShoutsUnratedQuery from '~/graphql/query/core/articles-load-unrated'
 
-import {
-  QueryLoad_Shouts_FollowedArgs,
-  QueryLoad_Shouts_UnratedArgs,
-  Shout
-} from '~/graphql/schema/core.gen'
-
-export const loadUnratedShouts = (
-  signedClient: Client | undefined,
-  options: QueryLoad_Shouts_UnratedArgs
-) => {
-  const page = `${options.offset || 0}-${(options?.limit || 0) + (options.offset || 0)}`
-  return cache(async () => {
-    const resp = await signedClient?.query(loadShoutsUnratedQuery, { ...options }).toPromise()
-    const result = resp?.data?.load_shouts_unrated
-    if (result) return result as Shout[]
-  }, `shouts-unrated-${page}`)
-}
+import { QueryLoad_Shouts_FollowedArgs, Shout } from '~/graphql/schema/core.gen'
 
 export const loadFollowedShouts = (
   signedClient: Client | undefined,

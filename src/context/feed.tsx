@@ -33,7 +33,7 @@ type FeedContextType = {
   feedByLayout: Accessor<{ [layout: string]: Shout[] }>
   topViewedFeed: Accessor<Shout[]>
   topCommentedFeed: Accessor<Shout[]>
-  addFeed: (articles: Shout[]) => void
+  addFeed: (articles?: Shout[]) => void
   loadShout: (slug: string) => Promise<void>
   loadShouts: (options: LoadShoutsOptions) => Promise<{ hasMore: boolean; newShouts: Shout[] }>
   loadMyFeed: (options: LoadShoutsOptions) => Promise<{ hasMore: boolean; newShouts: Shout[] }>
@@ -138,8 +138,8 @@ export const FeedProvider = (props: { children: JSX.Element }) => {
   })
 
   // Add articles to the articleEntities and sortedFeed state
-  const addFeed = (articles: Shout[]) => {
-    const newArticleEntities = articles.reduce(
+  const addFeed = (articles?: Shout[]) => {
+    const newArticleEntities = (articles || []).reduce(
       (acc, article) => {
         if (!acc[article.slug]) {
           acc[article.slug] = article
@@ -154,7 +154,7 @@ export const FeedProvider = (props: { children: JSX.Element }) => {
       ...newArticleEntities
     }))
 
-    setSortedFeed((prevSortedFeed) => [...prevSortedFeed, ...articles])
+    setSortedFeed((prevSortedFeed) => [...prevSortedFeed, ...(articles || [])])
   }
 
   // Load a single shout by slug and update the articleEntities and sortedFeed state
@@ -224,7 +224,7 @@ export const FeedProvider = (props: { children: JSX.Element }) => {
         featured: true,
         after
       },
-      order_by: 'likes_stat',
+      order_by: 'rating_stat',
       limit: 10
     }
     const fetcher = await loadShouts(options)
@@ -236,7 +236,7 @@ export const FeedProvider = (props: { children: JSX.Element }) => {
   const loadTopFeed = async (): Promise<void> => {
     const options: LoadShoutsOptions = {
       filters: { featured: true },
-      order_by: 'likes_stat',
+      order_by: 'featured_filter',
       limit: 10
     }
     const fetcher = await loadShouts(options)
