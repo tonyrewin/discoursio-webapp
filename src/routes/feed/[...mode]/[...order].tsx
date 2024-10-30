@@ -11,11 +11,7 @@ import { useLocalize } from '~/context/localize'
 import { ReactionsProvider } from '~/context/reactions'
 import { useSession } from '~/context/session'
 import { useTopics } from '~/context/topics'
-import {
-  loadCoauthoredShouts,
-  loadDiscussedShouts,
-  loadFollowedShouts
-} from '~/graphql/api/private'
+import { loadCoauthoredShouts, loadDiscussedShouts, loadFollowedShouts } from '~/graphql/api/private'
 
 import { loadShouts } from '~/graphql/api/public'
 import { loadTopics } from '~/graphql/api/public'
@@ -47,7 +43,7 @@ export type FeedSearchParams = { period?: FromPeriod }
 export default (props: RouteSectionProps<{ shouts: Shout[]; topics: Topic[] }>) => {
   const [searchParams] = useSearchParams<FeedSearchParams>() // ?period=month
   const { t } = useLocalize()
-  const { setFeed, feed } = useFeed()
+  const { setFeed } = useFeed()
   const { client, session } = useSession()
 
   // preloaded all topics

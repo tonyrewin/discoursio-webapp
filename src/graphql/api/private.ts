@@ -5,11 +5,7 @@ import loadShoutsCoauthoredQuery from '~/graphql/query/core/articles-load-coauth
 import loadShoutsDiscussedQuery from '~/graphql/query/core/articles-load-discussed'
 import loadShoutsFollowedQuery from '~/graphql/query/core/articles-load-followed'
 
-import {
-  QueryLoad_Shouts_FollowedArgs,
-  Shout
-} from '~/graphql/schema/core.gen'
-
+import { QueryLoad_Shouts_FollowedArgs, Shout } from '~/graphql/schema/core.gen'
 
 export const loadFollowedShouts = (
   signedClient: Client | undefined,

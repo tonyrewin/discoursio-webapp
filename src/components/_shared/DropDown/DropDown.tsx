@@ -1,7 +1,7 @@
 import type { PopupProps } from '../Popup'
 
 import { clsx } from 'clsx'
-import { For, Show, createMemo, createSignal, createEffect } from 'solid-js'
+import { For, Show, createEffect, createMemo, createSignal } from 'solid-js'
 
 import { Popup } from '../Popup'
 
@@ -61,12 +61,60 @@ const CheckMark = () => (
   </svg>
 )
 
+const OptionItem = (props: {
+  option: Option
+  isActive: boolean
+  onClick: (option: Option) => void
+}) => (
+  <li>
+    <button
+      class={clsx(popupStyles.action, {
+        [styles.active]: props.isActive
+      })}
+      onClick={() => props.onClick(props.option)}
+    >
+      <span>{props.option.title}</span>
+      <Show when={props.isActive}>
+        <CheckMark />
+      </Show>
+    </button>
+  </li>
+)
+
+const GroupOptions = (props: {
+  group: OptionGroup
+  showTitle: boolean
+  index: number
+}) => (
+  <div>
+    <Show when={props.showTitle}>
+      {props.index !== 0 && (
+        <li class={styles.separator}>
+          <hr />
+        </li>
+      )}
+      <li class={styles.groupTitle}>{props.group.title}</li>
+    </Show>
+    <For each={props.group.options}>
+      {(option) => (
+        <OptionItem
+          option={option}
+          isActive={props.group.currentOption.value === option.value}
+          onClick={props.group.onChange}
+        />
+      )}
+    </For>
+  </div>
+)
+
 export const DropDown = (props: Props) => {
   const [isPopupVisible, setIsPopupVisible] = createSignal(false)
 
-  const isOptionGroup = createMemo(() => Array.isArray(props.options) && props.options.length > 0 && 'options' in props.options[0])
+  const isOptionGroup = createMemo(
+    () => Array.isArray(props.options) && props.options.length > 0 && 'options' in props.options[0]
+  )
 
-  // Синхронизация currentOption с первой группой, 
+  // Синхронизация currentOption с первой группой,
   // если он передан и options являются OptionGroup[]
   createEffect(() => {
     if (props.currentOption && isOptionGroup()) {
@@ -74,15 +122,41 @@ export const DropDown = (props: Props) => {
     }
   })
 
+  const renderContent = () => {
+    if (isOptionGroup()) {
+      const groups = props.options as OptionGroup[]
+      const showGroupTitles = groups.length > 1
+      return (
+        <For each={groups}>
+          {(group, index) => <GroupOptions group={group} showTitle={showGroupTitles} index={index()} />}
+        </For>
+      )
+    }
+
+    return (
+      <For each={props.options as Option[]}>
+        {(option) => (
+          <OptionItem
+            option={option}
+            isActive={props.currentOption?.value === option.value}
+            onClick={(opt) => props.onChange?.(opt)}
+          />
+        )}
+      </For>
+    )
+  }
+
   return (
     <Show when={props.options.length > 0} keyed={true}>
       <Popup
         trigger={
           <div class={clsx(styles.trigger, props.triggerCssClass, styles.nonSelectable)}>
-            {isOptionGroup() ? (props.options as OptionGroup[])[0].currentOption.title : (props.options as Option[])[0].title} {' '}
+            {isOptionGroup()
+              ? (props.options as OptionGroup[])[0].currentOption.title
+              : (props.options as Option[])[0].title}{' '}
             <Chevron
               class={clsx(styles.chevron, {
-                [styles.rotate]: isPopupVisible(),
+                [styles.rotate]: isPopupVisible()
               })}
             />
           </div>
@@ -91,57 +165,7 @@ export const DropDown = (props: Props) => {
         onVisibilityChange={(isVisible) => setIsPopupVisible(isVisible)}
         {...props.popupProps}
       >
-        <ul class="nodash">
-          <For each={props.options}>
-            {(groupOrOption: OptionGroup | Option, groupIndex) => {
-              if (isOptionGroup()) {
-                const group = groupOrOption as OptionGroup
-                return (
-                  <div>
-                    <Show when={isOptionGroup() && (props.options as OptionGroup[]).length > 1}>
-                      {groupIndex() !== 0 && <li class={styles.separator}><hr /></li>}
-                      <li class={styles.groupTitle}>{group.title}</li>
-                    </Show>
-                    <For each={group.options}>
-                      {(option) => (
-                        <li>
-                          <button
-                            class={clsx(popupStyles.action, {
-                              [styles.active]: group.currentOption.value === option.value,
-                            })}
-                            onClick={() => group.onChange(option)}
-                          >
-                            <span>{option.title}</span>
-                            <Show when={group.currentOption.value === option.value}>
-                              <CheckMark />
-                            </Show>
-                          </button>
-                        </li>
-                      )}
-                    </For>
-                  </div>
-                )
-              } else {
-                const option = groupOrOption as Option
-                return (
-                  <li>
-                    <button
-                      class={clsx(popupStyles.action, {
-                        [styles.active]: props.currentOption?.value === option.value,
-                      })}
-                      onClick={() => props.onChange && props.onChange(option)}
-                    >
-                      <span>{option.title}</span>
-                      <Show when={props.currentOption?.value === option.value}>
-                        <CheckMark />
-                      </Show>
-                    </button>
-                  </li>
-                )
-              }
-            }}
-          </For>
-        </ul>
+        <ul class="nodash">{renderContent()}</ul>
       </Popup>
     </Show>
   )

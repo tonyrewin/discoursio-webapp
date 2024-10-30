@@ -154,7 +154,7 @@ export const FeedProvider = (props: { children: JSX.Element }) => {
       ...newArticleEntities
     }))
 
-    setSortedFeed((prevSortedFeed) => [...prevSortedFeed, ...(articles||[])])
+    setSortedFeed((prevSortedFeed) => [...prevSortedFeed, ...(articles || [])])
   }
 
   // Load a single shout by slug and update the articleEntities and sortedFeed state

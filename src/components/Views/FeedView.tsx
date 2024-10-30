@@ -8,12 +8,14 @@ import { InviteMembers } from '~/components/_shared/InviteMembers'
 import { Loading } from '~/components/_shared/Loading'
 import { ShareModal } from '~/components/_shared/ShareModal'
 import { useAuthors } from '~/context/authors'
+import { EXPO_LAYOUTS, useFeed } from '~/context/feed'
 import { useLocalize } from '~/context/localize'
 import { useReactions } from '~/context/reactions'
 import { useSession } from '~/context/session'
 import { useTopics } from '~/context/topics'
 import { useUI } from '~/context/ui'
 import { loadUnratedShouts } from '~/graphql/api/public'
+import { loadShouts } from '~/graphql/api/public'
 import type { Author, Shout } from '~/graphql/schema/core.gen'
 import { ReactionKind } from '~/graphql/schema/core.gen'
 import { capitalize } from '~/utils/capitalize'
@@ -25,16 +27,14 @@ import { ArticleCard } from '../Feed/ArticleCard'
 import { Placeholder } from '../Feed/Placeholder'
 import { Sidebar } from '../Feed/Sidebar'
 import { Modal } from '../_shared/Modal'
-import { EXPO_LAYOUTS, useFeed } from '~/context/feed'
 
 import styles from '~/styles/views/Feed.module.scss'
+import { ExpoLayoutType } from '~/types/common'
 import stylesBeside from '../Feed/Beside.module.scss'
 import stylesTopic from '../Feed/CardTopic.module.scss'
-import { ExpoLayoutType } from '~/types/common'
-import { loadShouts } from '~/graphql/api/public'
 
 export const FEED_PAGE_SIZE = 20
-export type FeedMode = 'featured' | 'not featured'| 'all'
+export type FeedMode = 'featured' | 'not featured' | 'all'
 export type ShoutsOrder = 'recent' | 'likes' | 'hot'
 export type PeriodType = 'all time' | 'day' | 'week' | 'month' | 'year'
 export type FeedProps = {
@@ -58,9 +58,14 @@ export const FeedView = (props: FeedProps) => {
   const { loadReactionsBy } = useReactions()
   const { topTopics } = useTopics()
   const { topAuthors } = useAuthors()
-  const { client, session } = useSession()
+  const { session } = useSession()
 
-  const unrated = createAsync(async () => await loadUnratedShouts({ limit: 5 }))
+  const unrated = createAsync(async () => {
+    const fetcher = loadUnratedShouts({ limit: 5 })
+    const result = await fetcher()
+    return result
+  })
+
   const recentComments = createAsync(
     async () => await loadReactionsBy({ by: { kinds: [ReactionKind.Comment] }, limit: 10 })
   )
@@ -78,18 +83,23 @@ export const FeedView = (props: FeedProps) => {
   const [shareData, setShareData] = createSignal<Shout | undefined>()
 
   // 1 filter changes quering observer
-  createEffect(on(
-    [mode, layoutFilter, currentPeriod], 
-    ([m, layout, after]) => {
-      setIsLoading(true)
-      const filters: { layout?: ExpoLayoutType | 'article', after?: number, featured?: boolean } = { layout, after }
-      if (m !== 'all') filters.featured = m === 'featured'
-      console.debug('[views.feed] filter changed', filters)
-      const shoutsLoader = loadShouts({ filters, limit: FEED_PAGE_SIZE })
-      shoutsLoader().then(addFeed)
-    },
-    { defer: true }
-  ))
+  createEffect(
+    on(
+      [mode, layoutFilter, currentPeriod],
+      ([m, layout, after]) => {
+        setIsLoading(true)
+        const filters: { layout?: ExpoLayoutType | 'article'; after?: number; featured?: boolean } = {
+          layout,
+          after
+        }
+        if (m !== 'all') filters.featured = m === 'featured'
+        console.debug('[views.feed] filter changed', filters)
+        const shoutsLoader = loadShouts({ filters, limit: FEED_PAGE_SIZE })
+        shoutsLoader().then(addFeed)
+      },
+      { defer: true }
+    )
+  )
 
   // 2 post-load reactions
   createEffect(
@@ -123,18 +133,19 @@ export const FeedView = (props: FeedProps) => {
     return { value, title: t(capitalize(o)) }
   }
   const asOptionsGroup = (
-    opts: string[], 
-    title?: string, 
+    opts: string[],
+    title?: string,
     onChange?: (option: Option) => void
   ): OptionGroup | Option[] => {
     const options = opts.map(asOption)
-    return onChange ? { 
-          title, 
-          options, 
-          currentOption: options[0], 
+    return onChange
+      ? ({
+          title,
+          options,
+          currentOption: options[0],
           onChange
-        }  as OptionGroup
-      : options as Option[]
+        } as OptionGroup)
+      : (options as Option[])
   }
 
   return (
@@ -185,8 +196,14 @@ export const FeedView = (props: FeedProps) => {
                 <DropDown
                   popupProps={{ horizontalAnchor: 'right' }}
                   options={[
-                    asOptionsGroup(['all', 'featured', 'not featured'], '', (opt: Option) => setMode(opt.value as FeedMode)) as OptionGroup,
-                    asOptionsGroup(['', 'article', ...EXPO_LAYOUTS], t(layoutFilter() || 'Layout') as string, (opt: Option) => setLayoutFilter(opt.value as ExpoLayoutType)) as OptionGroup
+                    asOptionsGroup(['all', 'featured', 'not featured'], '', (opt: Option) =>
+                      setMode(opt.value as FeedMode)
+                    ) as OptionGroup,
+                    asOptionsGroup(
+                      ['all', 'article', ...EXPO_LAYOUTS],
+                      t(layoutFilter() || 'Layouts') as string,
+                      (opt: Option) => setLayoutFilter(opt.value as ExpoLayoutType)
+                    ) as OptionGroup
                   ]}
                   currentOption={asOption(props.mode || 'all')}
                   triggerCssClass={styles.periodSwitcher}
@@ -299,10 +316,10 @@ export const FeedView = (props: FeedProps) => {
               </ul>
             </section>
 
-            <Show when={unrated()}>
+            <Show when={unrated?.()}>
               <section class={clsx(styles.asideSection)}>
                 <h4>{t('Be the first to rate')}</h4>
-                <For each={(unrated() || []) as Shout[]}>
+                <For each={unrated() as Shout[]}>
                   {(article) => (
                     <ArticleCard article={article} settings={{ noimage: true, nodate: true }} />
                   )}
