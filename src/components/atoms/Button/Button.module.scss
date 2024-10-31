@@ -7,68 +7,61 @@
   cursor: pointer;
   white-space: nowrap;
 
-  &:disabled {
-    opacity: 1 !important;
-  }
-
   &.primary {
-    background: var(--background-color-invert);
-    color: var(--default-color-invert);
-
-    &:hover {
-      background: #404040;
-      color: #fff;
-    }
-
-    &:active {
-      background: #000;
-      color: rgb(255 255 255 / 40%);
-    }
-
     &:disabled {
       background: var(--background-color-invert);
       color: rgb(255 255 255 / 40%);
     }
   }
 
-  &.primary-disabled {
-    background: var(--background-color-invert);
-    color: rgb(255 255 255 / 40%);
-    pointer-events: none;
-  }
-
   &.secondary {
-    background: #f7f7f8;
-    color: #000;
-
-    &:hover {
-      background: #e9e9ee;
-      color: #000;
-    }
-
-    &:active {
-      background: #f7f7f8;
-      color: rgb(105 105 105 / 40%);
-    }
-
     &:disabled {
-      border: 2px solid #696969;
+      border: 0.2rem solid #696969;
       color: #696969;
     }
   }
 
-  &.secondary-disabled {
-    border: 2px solid #696969;
-    color: #696969;
-    pointer-events: none;
+  &.primary-square {
+    &:disabled {
+      background: #f7f7f8;
+      color: #9fa1a7;
+    }
   }
 
-  &.bordered {
+  &.secondary-square  {
+    &:disabled {
+      background: #f7f7f8;
+      color: #9fa1a7;
+    }
+  }
+
+  &.M-square {
+    min-width: 8rem;
+    height: 5.6rem;
+    font-size: 2rem;
+    padding: 1.6rem 2rem;
+  }
+
+  &.S-square {
+    min-width: 6.3rem;
+    height: 3.7rem;
+    font-size: 1.6rem;
+    padding: 0.8rem 1.6rem;
+  }
+
+  &.XS-square {
+    min-width: 5.1rem;
+    height: 3rem;
+    font-size: 1.4rem;
+    padding: 0.6rem 1.2rem;
+  }
+
+  &.subscribeButton {
     min-width: auto !important;
     background: var(--link-color);
     color: var(--link-hover-color);
-    border-radius: 8px;
     border: 2px solid #000;
+    border-radius: 8px;
 
     &:hover {
       background: none;
@@ -86,9 +79,10 @@
     }
   }
 
-  &.outline {
+  &.unsubscribeButton {
     min-width: auto !important;
     border: 2px solid #000;
+    border-radius: 8px;
 
     &:hover {
       background: var(--link-color);
@@ -105,105 +99,36 @@
     }
   }
 
-  &.primary-square {
-    background: var(--background-color-invert);
-    color: var(--default-color-invert);
-
-    &:hover {
-      color: #ccc;
-    }
-
-    &:active {
-      color: #9fa1a7;
-    }
-
-    &:disabled {
-      border-radius: 2px;
-      background: #f7f7f8;
-      color: #9fa1a7;
-    }
-  }
-
-  &.secondary-square {
-    background: #f7f7f7;
-    color: #141414;
-
-    &:hover {
-      background: #e9e9ee;
-    }
-
-    &:active {
-      background: #ccc;
-    }
-
-    &:disabled {
-      border-radius: 2px;
-      background: #f7f7f8;
-      color: #9fa1a7;
-    }
-  }
-
-  &.disabled {
-    border-radius: 2px;
-    background: #f7f7f8;
-    color: #9fa1a7;
-    pointer-events: none;
-  }
-
   &.L {
-    height: 50px;
-    min-width: 112px;
-    border-radius: 14px;
-    font-size: 16px;
-    padding: 0 30px;
+    min-width: 11.2rem;
+    border-radius: 1.4rem;
+    font-size: 1.6rem;
+    padding: 0 3rem;
   }
 
   &.M {
-    height: 40px;
-    min-width: 89px;
-    border-radius: 12px;
-    font-size: 15px;
-    padding: 0 20px;
+    min-width: 8.9rem;
+    height: 4rem;
+    border-radius: 1.2rem;
+    font-size: 1.5rem;
+    padding: 0 2rem;
   }
 
-  &.S {
-    height: 32px;
-    min-width: 82px;
-    border-radius: 8px;
-    font-size: 14px;
-    padding: 0 18px;
-  }
-
-  &.M-square {
-    min-width: 80px;
-    height: 56px;
-    border-radius: 2px;
-    font-size: 20px;
-    padding: 16px 20px;
-  }
-
-  &.S-square {
-    min-width: 63px;
-    height: 37px;
-    border-radius: 2px;
-    font-size: 16px;
-    padding: 8px 16px;
-  }
-
-  &.XS-square {
-    min-width: 51px;
-    height: 30px;
-    border-radius: 2px;
-    font-size: 14px;
-    padding: 6px 12px;
+  &.S  {
+    min-width: 8.2rem;
+    border-radius: 0.8rem;
+    font-size: 1.4rem;
+    padding: 0 1.8rem;
   }
 
   &.loadingDots {
     display: inline-flex;
     align-items: center;
-    font-size: 30px;
+    font-size: 50px;
 
     & span {
+      position: relative;
+      bottom: 9px;
       animation: blink 2s infinite;
 
       &:nth-child(1) {
