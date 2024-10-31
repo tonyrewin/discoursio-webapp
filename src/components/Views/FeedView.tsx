@@ -18,6 +18,7 @@ import { loadUnratedShouts } from '~/graphql/api/public'
 import { loadShouts } from '~/graphql/api/public'
 import type { Author, Shout } from '~/graphql/schema/core.gen'
 import { ReactionKind } from '~/graphql/schema/core.gen'
+import { ExpoLayoutType } from '~/types/common'
 import { capitalize } from '~/utils/capitalize'
 import { CommentDate } from '../Article/CommentDate'
 import { getShareUrl } from '../Article/SharePopup'
@@ -28,27 +29,19 @@ import { Placeholder } from '../Feed/Placeholder'
 import { Sidebar } from '../Feed/Sidebar'
 import { Modal } from '../_shared/Modal'
 
+import { PeriodType, getFromDate } from '~/lib/fromPeriod'
 import styles from '~/styles/views/Feed.module.scss'
-import { ExpoLayoutType } from '~/types/common'
 import stylesBeside from '../Feed/Beside.module.scss'
 import stylesTopic from '../Feed/CardTopic.module.scss'
 
 export const FEED_PAGE_SIZE = 20
 export type FeedMode = 'featured' | 'not featured' | 'all'
 export type ShoutsOrder = 'recent' | 'likes' | 'hot'
-export type PeriodType = 'all time' | 'day' | 'week' | 'month' | 'year'
+
 export type FeedProps = {
   mode?: FeedMode
   order?: ShoutsOrder
 }
-
-const PERIODS = {
-  'all time': 0,
-  day: 24 * 60 * 60,
-  week: 7 * 24 * 60 * 60,
-  month: 30 * 24 * 60 * 60,
-  year: 365 * 24 * 60 * 60
-} as Record<PeriodType, number>
 
 export const FeedView = (props: FeedProps) => {
   const { t } = useLocalize()
@@ -76,7 +69,7 @@ export const FeedView = (props: FeedProps) => {
   // filters
   const [mode, setMode] = createSignal<FeedMode>(props.mode || 'all')
   const [layoutFilter, setLayoutFilter] = createSignal<ExpoLayoutType | 'article' | undefined>()
-  const [currentPeriod, setCurrentPeriod] = createSignal<number | undefined>()
+  const [currentPeriod, setCurrentPeriod] = createSignal<PeriodType>('all time')
   // loading state
   const [isLoading, setIsLoading] = createSignal(false)
   const [isRightColumnLoaded, setIsRightColumnLoaded] = createSignal(false)
@@ -86,11 +79,11 @@ export const FeedView = (props: FeedProps) => {
   createEffect(
     on(
       [mode, layoutFilter, currentPeriod],
-      ([m, layout, after]) => {
+      ([m, layout, period]) => {
         setIsLoading(true)
         const filters: { layout?: ExpoLayoutType | 'article'; after?: number; featured?: boolean } = {
           layout,
-          after
+          after: getFromDate(period as PeriodType)
         }
         if (m !== 'all') filters.featured = m === 'featured'
         console.debug('[views.feed] filter changed', filters)
@@ -128,8 +121,8 @@ export const FeedView = (props: FeedProps) => {
   }
 
   const asOption = (o: string): Option => {
-    const isPeriod = ['day', 'week', 'month', 'year'].includes(o)
-    const value = isPeriod ? Math.floor(Date.now() / 1000) - PERIODS[o as PeriodType] : o
+    const isPeriod = ['all time', 'day', 'week', 'month', 'year'].includes(o)
+    const value = isPeriod ? Math.floor(Date.now() / 1000) - getFromDate(o as PeriodType) : o
     return { value, title: t(capitalize(o)) }
   }
   const asOptionsGroup = (
@@ -189,9 +182,9 @@ export const FeedView = (props: FeedProps) => {
                 <DropDown
                   popupProps={{ horizontalAnchor: 'right' }}
                   options={asOptionsGroup(['all time', 'day', 'week', 'month', 'year']) as Option[]}
-                  currentOption={{ value: currentPeriod() || 0, title: t('All Time') } as Option}
+                  currentOption={asOption(currentPeriod() || 'all time')}
                   triggerCssClass={styles.periodSwitcher}
-                  onChange={(opt: Option) => setCurrentPeriod(opt.value as number)}
+                  onChange={(opt: Option) => setCurrentPeriod(opt.title.toLowerCase() as PeriodType)}
                 />
                 <DropDown
                   popupProps={{ horizontalAnchor: 'right' }}

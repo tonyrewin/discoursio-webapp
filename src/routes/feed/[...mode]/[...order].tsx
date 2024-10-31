@@ -12,11 +12,10 @@ import { ReactionsProvider } from '~/context/reactions'
 import { useSession } from '~/context/session'
 import { useTopics } from '~/context/topics'
 import { loadCoauthoredShouts, loadDiscussedShouts, loadFollowedShouts } from '~/graphql/api/private'
-
 import { loadShouts } from '~/graphql/api/public'
 import { loadTopics } from '~/graphql/api/public'
 import { LoadShoutsOptions, Shout, Topic } from '~/graphql/schema/core.gen'
-import { FromPeriod, getFromDate } from '~/lib/fromPeriod'
+import { PeriodType, getFromDate } from '~/lib/fromPeriod'
 
 const privateFeeds = {
   followed: loadFollowedShouts,
@@ -38,7 +37,7 @@ export const route = {
   }
 } satisfies RouteDefinition
 
-export type FeedSearchParams = { period?: FromPeriod }
+export type FeedSearchParams = { period?: PeriodType }
 
 export default (props: RouteSectionProps<{ shouts: Shout[]; topics: Topic[] }>) => {
   const [searchParams] = useSearchParams<FeedSearchParams>() // ?period=month
@@ -80,7 +79,7 @@ export default (props: RouteSectionProps<{ shouts: Shout[]; topics: Topic[] }>) 
     // ?period=month - time period filter
     if (searchParams?.period) {
       const period = searchParams?.period || 'month'
-      options.filters = { after: getFromDate(period as FromPeriod) }
+      options.filters = { after: getFromDate(period as PeriodType) }
     }
     if (!client()) {
       throw new Error('API client not connected')
