@@ -66,33 +66,3 @@ bun run e2e:tests:ci # Запуск тестов в CI
 Тесты выполняются в GitHub Actions. Убедитесь, что `BASE_URL` корректно настроен в CI.
 
 ## Версия: 0.9.7
-
-## Packages
-
-packages/
-└── inbox/
-    ├── src/
-    │   ├── components/
-    │   │   ├── InboxView.tsx
-    │   │   ├── DialogCard.tsx
-    │   │   ├── DialogHeader.tsx
-    │   │   ├── Message.tsx
-    │   │   ├── MessagesFallback.tsx
-    │   │   ├── Search.tsx
-    │   │   ├── QuotedMessage.tsx
-    │   │   ├── InviteMembers.tsx
-    │   │   ├── InviteUser.tsx
-    │   │   ├── CreateModalContent.tsx
-    │   │   ├── MessageActionsPopup.tsx
-    │   │   └── DialogAvatar.tsx
-    │   ├── context/
-    │   │   └── InboxContext.tsx
-    │   ├── styles/
-    │   │   ├── Inbox.module.scss
-    │   │   ├── Message.module.scss
-    │   │   ├── QuotedMessage.module.scss
-    │   │   └── ... другие SCSS файлы
-    │   └── index.ts
-    ├── package.json
-    └── tsconfig.json
-    
