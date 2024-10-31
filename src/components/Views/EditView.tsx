@@ -106,7 +106,7 @@ export const EditView = (props: Props) => {
               media: shout.media || '',
               layout: shout.layout
             }
-            setForm((_) => draftForm)
+            setForm((_: ShoutForm) => draftForm)
             console.debug('draft from props data: ', draftForm)
           }
         }
@@ -241,10 +241,9 @@ export const EditView = (props: Props) => {
   }
 
   const debouncedAutoSave = debounce(AUTO_SAVE_DELAY, autoSave)
-
   const handleInputChange = (key: keyof ShoutForm, value: string) => {
-    console.log(`[handleInputChange] ${key}: ${value}`)
-    setForm(key, value)
+    console.log(`[handleInputChange] ${String(key)}: ${value}`)
+    setForm((_: ShoutForm) => ({ ..._, [key]: value }))
     setHasChanges(true)
     debouncedAutoSave()
   }
@@ -368,7 +367,7 @@ export const EditView = (props: Props) => {
                       }
                       isMultiply={false}
                       fileType={'image'}
-                      onUpload={(val) => handleInputChange('coverImageUrl', val[0].url)}
+                      onUpload={(val: { url: string }[]) => handleInputChange('coverImageUrl', val[0].url)}
                     />
                   }
                 >
@@ -400,17 +399,17 @@ export const EditView = (props: Props) => {
               <EditorSwiper
                 images={mediaItems()}
                 onImageChange={handleMediaChange}
-                onImageDelete={(index) => handleMediaDelete(index)}
+                onImageDelete={(index: number) => handleMediaDelete(index)}
                 onImagesAdd={(value: MediaItem[]) => handleAddMedia(value)}
-                onImagesSorted={(value) => handleSortedMedia(value)}
+                onImagesSorted={(value: MediaItem[]) => handleSortedMedia(value)}
               />
             </Show>
 
             <Show when={props.shout.layout === 'video'}>
               <VideoUploader
                 video={mediaItems()}
-                onVideoAdd={(data) => handleAddMedia(data)}
-                onVideoDelete={(index) => handleMediaDelete(index)}
+                onVideoAdd={(data: MediaItem[]) => handleAddMedia(data)}
+                onVideoDelete={(index: number) => handleMediaDelete(index)}
               />
             </Show>
 
