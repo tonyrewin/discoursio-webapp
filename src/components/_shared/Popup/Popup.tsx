@@ -1,7 +1,7 @@
 import { clsx } from 'clsx'
 import { JSX, Show, createEffect, createSignal } from 'solid-js'
 
-import { useOutsideClickHandler } from '../../../utils/useOutsideClickHandler'
+import { useOutsideClickHandler } from '~/lib/useOutsideClickHandler'
 
 import styles from './Popup.module.scss'
 
@@ -14,7 +14,7 @@ export type PopupProps = {
   children: JSX.Element
   onVisibilityChange?: (isVisible: boolean) => void
   horizontalAnchor?: HorizontalAnchor
-  variant?: 'bordered' | 'tiny'
+  variant?: 'tiny'
   closePopup?: boolean
 }
 
@@ -28,11 +28,11 @@ export const Popup = (props: PopupProps) => {
     }
   })
 
-  const containerRef: { current: HTMLElement } = { current: null }
+  let containerRef: HTMLElement | undefined
   const closePopup = () => setIsVisible(false)
 
   useOutsideClickHandler({
-    containerRef,
+    containerRef: containerRef,
     predicate: () => isVisible(),
     handler: () => closePopup()
   })
@@ -45,7 +45,7 @@ export const Popup = (props: PopupProps) => {
 
   const toggle = () => setIsVisible((oldVisible) => !oldVisible)
   return (
-    <span class={clsx(styles.container, props.containerCssClass)} ref={(el) => (containerRef.current = el)}>
+    <span class={clsx(styles.container, props.containerCssClass)} ref={(el) => (containerRef = el)}>
       <span class={styles.trigger} onClick={toggle}>
         {props.trigger}
       </span>
@@ -54,7 +54,6 @@ export const Popup = (props: PopupProps) => {
           class={clsx(styles.popup, props.popupCssClass, {
             [styles.horizontalAnchorCenter]: horizontalAnchor === 'center',
             [styles.horizontalAnchorRight]: horizontalAnchor === 'right',
-            [styles.bordered]: props.variant === 'bordered',
             [styles.tiny]: props.variant === 'tiny'
           })}
         >

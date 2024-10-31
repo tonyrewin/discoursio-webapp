@@ -2,17 +2,16 @@ import { createInfiniteScroll } from '@solid-primitives/pagination'
 import { clsx } from 'clsx'
 import { For, Show, createEffect, createSignal, on } from 'solid-js'
 
-import { useInbox } from '../../../context/inbox'
-import { useLocalize } from '../../../context/localize'
-import { Author } from '../../../graphql/schema/core.gen'
-import { hideModal } from '../../../stores/ui'
-import { useAuthorsStore } from '../../../stores/zine/authors'
+import { useAuthors } from '~/context/authors'
+import { useInbox } from '~/context/inbox'
+import { useLocalize } from '~/context/localize'
+import { useUI } from '~/context/ui'
+import { Author } from '~/graphql/schema/core.gen'
 import { AuthorBadge } from '../../Author/AuthorBadge'
 import { Button } from '../Button'
 import { DropdownSelect } from '../DropdownSelect'
-import { Loading } from '../Loading'
+import { InlineLoader } from '../InlineLoader'
 
-import { InlineLoader } from '../../InlineLoader'
 import styles from './InviteMembers.module.scss'
 
 type InviteAuthor = Author & { selected: boolean }
@@ -25,6 +24,7 @@ type Props = {
 const PAGE_SIZE = 50
 export const InviteMembers = (props: Props) => {
   const { t } = useLocalize()
+  const { hideModal } = useUI()
   const roles = [
     {
       title: t('Editor'),
@@ -40,7 +40,7 @@ export const InviteMembers = (props: Props) => {
     }
   ]
 
-  const { sortedAuthors } = useAuthorsStore({ sortBy: 'name' })
+  const { authorsSorted } = useAuthors()
   const { loadChats, createChat } = useInbox()
   const [authorsToInvite, setAuthorsToInvite] = createSignal<InviteAuthor[]>()
   const [searchResultAuthors, setSearchResultAuthors] = createSignal<Author[]>()
@@ -48,7 +48,7 @@ export const InviteMembers = (props: Props) => {
   const fetcher = async (page: number) => {
     await new Promise((resolve, reject) => {
       const checkDataLoaded = () => {
-        if (sortedAuthors().length > 0) {
+        if ((authorsSorted?.().length || 0) > 0) {
           resolve(true)
         } else {
           setTimeout(checkDataLoaded, 100)
@@ -60,14 +60,14 @@ export const InviteMembers = (props: Props) => {
     const start = page * PAGE_SIZE
     const end = start + PAGE_SIZE
     const authors = authorsToInvite()?.map((author) => ({ ...author, selected: false }))
-    return authors?.slice(start, end)
+    return authors?.slice(start, end) || []
   }
 
   const [pages, setEl, { end }] = createInfiniteScroll(fetcher)
 
   createEffect(
     on(
-      () => sortedAuthors(),
+      authorsSorted,
       (currentAuthors) => {
         setAuthorsToInvite(currentAuthors.map((author) => ({ ...author, selected: false })))
       },
@@ -78,7 +78,7 @@ export const InviteMembers = (props: Props) => {
   const handleInputChange = async (value: string) => {
     if (value.length > 1) {
       const match = authorsToInvite()?.filter((author) =>
-        author.name.toLowerCase().includes(value.toLowerCase())
+        author.name?.toLowerCase().includes(value.toLowerCase())
       )
       setSearchResultAuthors(match)
     } else {
@@ -86,20 +86,20 @@ export const InviteMembers = (props: Props) => {
     }
   }
 
-  const handleInvite = (id) => {
+  const handleInvite = (id: number) => {
     setCollectionToInvite((prev) => [...prev, id])
   }
 
   const handleCloseModal = () => {
     setSearchResultAuthors()
-    setCollectionToInvite()
+    setCollectionToInvite([])
     hideModal()
   }
 
   const handleCreate = async () => {
     try {
-      const initChat = await createChat(collectionToInvite(), 'chat Title')
-      console.debug('[components.Inbox] create chat result:', initChat)
+      const result = await createChat(collectionToInvite(), 'chat Title')
+      console.debug('[components.Inbox] create chat result:', result)
       hideModal()
       await loadChats()
     } catch (error) {
@@ -159,7 +159,7 @@ export const InviteMembers = (props: Props) => {
               )}
             </For>
             <Show when={!end()}>
-              <div ref={setEl as (e: HTMLDivElement) => void}>
+              <div ref={(el: HTMLDivElement) => setEl(el, () => true)}>
                 <InlineLoader />
               </div>
             </Show>

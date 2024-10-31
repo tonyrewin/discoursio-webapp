@@ -1,24 +1,22 @@
 import { clsx } from 'clsx'
-import { Show, createMemo, createSignal } from 'solid-js'
+import { Show, createEffect, createMemo, createSignal, on } from 'solid-js'
 
-import { useFollowing } from '../../context/following'
-import { useLocalize } from '../../context/localize'
-import { useSession } from '../../context/session'
-import { FollowingEntity, type Topic } from '../../graphql/schema/core.gen'
-import { capitalize } from '../../utils/capitalize'
+import { useFollowing } from '~/context/following'
+import { useLocalize } from '~/context/localize'
+import { useSession } from '~/context/session'
+import { Author, FollowingEntity, type Topic } from '~/graphql/schema/core.gen'
+import { capitalize } from '~/utils/capitalize'
 import { CardTopic } from '../Feed/CardTopic'
-import { Button } from '../_shared/Button'
 import { CheckButton } from '../_shared/CheckButton'
-import { Icon } from '../_shared/Icon'
+import { FollowingButton } from '../_shared/FollowingButton'
 import { ShowOnlyOnClient } from '../_shared/ShowOnlyOnClient'
 
-import stylesButton from '../_shared/Button/Button.module.scss'
 import styles from './Card.module.scss'
 
 interface TopicProps {
   topic: Topic
   compact?: boolean
-  subscribed?: boolean
+  followed?: boolean
   shortDescription?: boolean
   subscribeButtonBottom?: boolean
   additionalClass?: string
@@ -27,7 +25,7 @@ interface TopicProps {
   showPublications?: boolean
   showDescription?: boolean
   isCardMode?: boolean
-  minimizeSubscribeButton?: boolean
+  minimize?: boolean
   isNarrow?: boolean
   withIcon?: boolean
 }
@@ -37,34 +35,25 @@ export const TopicCard = (props: TopicProps) => {
   const title = createMemo(() =>
     capitalize(lang() === 'en' ? props.topic.slug.replaceAll('-', ' ') : props.topic.title || '')
   )
-  const { author, requireAuthentication } = useSession()
-  const { setFollowing, loading: subLoading } = useFollowing()
-  const [followed, setFollowed] = createSignal()
+  const { session, requireAuthentication } = useSession()
+  const author = createMemo<Author>(() => session()?.user?.app_data?.profile as Author)
+  const { follow, unfollow, follows } = useFollowing()
+  const [isFollowed, setIsFollowed] = createSignal(false)
+  createEffect(
+    on([() => follows, () => props.topic], ([flws, tpc]) => {
+      if (flws && tpc) {
+        const followed = follows?.topics?.some((topics) => topics.id === props.topic?.id)
+        setIsFollowed(Boolean(followed))
+      }
+    })
+  )
 
   const handleFollowClick = () => {
-    const value = !followed()
     requireAuthentication(() => {
-      setFollowed(value)
-      setFollowing(FollowingEntity.Topic, props.topic.slug, value)
-    }, 'subscribe')
-  }
-
-  const subscribeValue = () => {
-    return (
-      <>
-        <Show when={props.iconButton}>
-          <Show when={followed()} fallback="+">
-            <Icon name="check-subscribed" />
-          </Show>
-        </Show>
-        <Show when={!props.iconButton}>
-          <Show when={followed()} fallback={t('Follow')}>
-            <span class={stylesButton.buttonSubscribeLabelHovered}>{t('Unfollow')}</span>
-            <span class={stylesButton.buttonSubscribeLabel}>{t('Following')}</span>
-          </Show>
-        </Show>
-      </>
-    )
+      isFollowed()
+        ? unfollow(FollowingEntity.Topic, props.topic.slug)
+        : follow(FollowingEntity.Topic, props.topic.slug)
+    }, 'follow')
   }
 
   return (
@@ -95,13 +84,13 @@ export const TopicCard = (props: TopicProps) => {
           </Show>
 
           <Show when={props.isCardMode}>
-            <CardTopic title={props.topic.title} slug={props.topic.slug} class={styles.cardMode} />
+            <CardTopic title={props.topic?.title || ''} slug={props.topic.slug} class={styles.cardMode} />
           </Show>
 
           <Show when={props.topic.pic}>
             <div class={styles.topicAvatar}>
               <a href={`/topic/${props.topic.slug}`}>
-                <img src={props.topic.pic} alt={title()} />
+                <img src={props.topic?.pic || ''} alt={title()} />
               </a>
             </div>
           </Show>
@@ -126,27 +115,12 @@ export const TopicCard = (props: TopicProps) => {
           <ShowOnlyOnClient>
             <Show when={author()}>
               <Show
-                when={!props.minimizeSubscribeButton}
+                when={!props.minimize}
                 fallback={
-                  <CheckButton
-                    text={t('Follow')}
-                    checked={Boolean(followed())}
-                    onClick={handleFollowClick}
-                  />
+                  <CheckButton text={t('Follow')} checked={isFollowed()} onClick={handleFollowClick} />
                 }
               >
-                <Button
-                  variant="bordered"
-                  size="M"
-                  value={subscribeValue()}
-                  onClick={handleFollowClick}
-                  isSubscribeButton={true}
-                  class={clsx(styles.actionButton, {
-                    [styles.isSubscribing]: subLoading(),
-                    [stylesButton.subscribed]: followed()
-                  })}
-                  // disabled={subLoading()}
-                />
+                <FollowingButton action={handleFollowClick} isFollowed={isFollowed()} />
               </Show>
             </Show>
           </ShowOnlyOnClient>

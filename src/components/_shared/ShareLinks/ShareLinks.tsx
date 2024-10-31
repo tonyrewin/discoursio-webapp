@@ -2,11 +2,12 @@ import { FACEBOOK, TELEGRAM, TWITTER, VK, createSocialShare } from '@solid-primi
 import { clsx } from 'clsx'
 import { Show, createSignal } from 'solid-js'
 
-import { useLocalize } from '../../../context/localize'
-import { useSnackbar } from '../../../context/snackbar'
+import { useLocalize } from '~/context/localize'
+import { useSnackbar } from '~/context/ui'
 import { Icon } from '../Icon'
 import { Popover } from '../Popover'
 
+import popupStyles from '../Popup/Popup.module.scss'
 import styles from './ShareLinks.module.scss'
 
 type Props = {
@@ -30,10 +31,10 @@ export const ShareLinks = (props: Props) => {
     description: props.description
   }))
 
-  const handleShare = (network) => {
+  const handleShare = (network: string | undefined) => {
     share(network)
     if (props.variant === 'inModal') {
-      props.onShareClick()
+      props.onShareClick?.()
     }
   }
   const copyLink = async () => {
@@ -42,7 +43,7 @@ export const ShareLinks = (props: Props) => {
       setIsLinkCopied(true)
       setTimeout(() => {
         setIsLinkCopied(false)
-        props.onShareClick()
+        props.onShareClick?.()
       }, 3000)
     } else {
       showSnackbar({ body: t('Link copied') })
@@ -53,26 +54,35 @@ export const ShareLinks = (props: Props) => {
     <div class={clsx(styles.ShareLinks, props.class, { [styles.inModal]: props.variant === 'inModal' })}>
       <ul class="nodash">
         <li>
-          <button role="button" class={styles.shareControl} onClick={() => handleShare(FACEBOOK)}>
-            <Icon name="facebook-white" class={styles.icon} />
+          <button
+            class={clsx(styles.shareControl, popupStyles.action)}
+            onClick={() => handleShare(FACEBOOK)}
+          >
+            <Icon name="facebook-white" class={clsx(styles.icon, popupStyles.icon)} />
             Facebook
           </button>
         </li>
         <li>
-          <button role="button" class={styles.shareControl} onClick={() => handleShare(TWITTER)}>
-            <Icon name="twitter-white" class={styles.icon} />
+          <button
+            class={clsx(styles.shareControl, popupStyles.action)}
+            onClick={() => handleShare(TWITTER)}
+          >
+            <Icon name="twitter-white" class={clsx(styles.icon, popupStyles.icon)} />
             Twitter
           </button>
         </li>
         <li>
-          <button role="button" class={styles.shareControl} onClick={() => handleShare(TELEGRAM)}>
-            <Icon name="telegram-white" class={styles.icon} />
+          <button
+            class={clsx(styles.shareControl, popupStyles.action)}
+            onClick={() => handleShare(TELEGRAM)}
+          >
+            <Icon name="telegram-white" class={clsx(styles.icon, popupStyles.icon)} />
             Telegram
           </button>
         </li>
         <li>
-          <button role="button" class={styles.shareControl} onClick={() => handleShare(VK)}>
-            <Icon name="vk-white" class={styles.icon} />
+          <button class={clsx(styles.shareControl, popupStyles.action)} onClick={() => handleShare(VK)}>
+            <Icon name="vk-white" class={clsx(styles.icon, popupStyles.icon)} />
             VK
           </button>
         </li>
@@ -80,20 +90,22 @@ export const ShareLinks = (props: Props) => {
           <Show
             when={props.variant === 'inModal'}
             fallback={
-              <button role="button" class={styles.shareControl} onClick={copyLink}>
-                <Icon name="link-white" class={styles.icon} />
+              <button class={clsx(styles.shareControl, popupStyles.action)} onClick={copyLink}>
+                <Icon name="link-white" class={clsx(styles.icon, popupStyles.icon)} />
                 {t('Copy link')}
               </button>
             }
           >
             <form class={clsx('pretty-form__item', styles.linkInput)}>
-              <input type="text" name="link" readonly value={props.shareUrl} />
-              <label for="link">{t('Copy link')}</label>
+              <label for="link">
+                <input type="text" name="link" readonly value={props.shareUrl} />
+                {t('Copy link')}
+              </label>
 
               <Popover content={t('Copy link')}>
-                {(triggerRef: (el) => void) => (
+                {(triggerRef: (el: HTMLElement) => void) => (
                   <div class={styles.copyButton} onClick={copyLink} ref={triggerRef}>
-                    <Icon name="copy" class={styles.icon} />
+                    <Icon name="copy" class={clsx(styles.icon, popupStyles.icon)} />
                   </div>
                 )}
               </Popover>

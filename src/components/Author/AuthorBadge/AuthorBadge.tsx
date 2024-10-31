@@ -1,103 +1,102 @@
-import { openPage } from '@nanostores/router'
+import { useNavigate } from '@solidjs/router'
 import { clsx } from 'clsx'
 import { Match, Show, Switch, createEffect, createMemo, createSignal, on } from 'solid-js'
-
-import { useFollowing } from '../../../context/following'
-import { useLocalize } from '../../../context/localize'
-import { useMediaQuery } from '../../../context/mediaQuery'
-import { useSession } from '../../../context/session'
-import { Author, FollowingEntity } from '../../../graphql/schema/core.gen'
-import { router, useRouter } from '../../../stores/router'
-import { translit } from '../../../utils/ru2en'
-import { isCyrillic } from '../../../utils/translate'
-import { Button } from '../../_shared/Button'
-import { CheckButton } from '../../_shared/CheckButton'
-import { ConditionalWrapper } from '../../_shared/ConditionalWrapper'
-import { Icon } from '../../_shared/Icon'
+import { Button } from '~/components/_shared/Button'
+import { CheckButton } from '~/components/_shared/CheckButton'
+import { ConditionalWrapper } from '~/components/_shared/ConditionalWrapper'
+import { FollowingButton } from '~/components/_shared/FollowingButton'
+import { Icon } from '~/components/_shared/Icon'
+import { useFollowing } from '~/context/following'
+import { useLocalize } from '~/context/localize'
+import { useSession } from '~/context/session'
+import { Author, FollowingEntity } from '~/graphql/schema/core.gen'
+import { isCyrillic } from '~/intl/translate'
+import { translit } from '~/intl/translit'
+import { mediaMatches } from '~/lib/mediaQuery'
 import { Userpic } from '../Userpic'
-
-import { FollowedInfo } from '../../../pages/types'
-import stylesButton from '../../_shared/Button/Button.module.scss'
 import styles from './AuthorBadge.module.scss'
 
 type Props = {
   author: Author
-  minimizeSubscribeButton?: boolean
+  minimize?: boolean
   showMessageButton?: boolean
   iconButtons?: boolean
   nameOnly?: boolean
   inviteView?: boolean
   onInvite?: (id: number) => void
   selected?: boolean
-  isFollowed?: FollowedInfo
+  subscriptionsMode?: boolean
+  onClick?: () => void
 }
 export const AuthorBadge = (props: Props) => {
-  const { mediaMatches } = useMediaQuery()
-  const { author, requireAuthentication } = useSession()
+  const { session, requireAuthentication } = useSession()
+  const author = createMemo<Author>(() => session()?.user?.app_data?.profile as Author)
+  const { follow, unfollow, follows, following } = useFollowing()
   const [isMobileView, setIsMobileView] = createSignal(false)
-  const [isFollowed, setIsFollowed] = createSignal<boolean>()
+  const [isFollowed, setIsFollowed] = createSignal<boolean>(
+    Boolean(follows?.authors?.some((authorEntity) => Boolean(authorEntity.id === props.author?.id)))
+  )
+  createEffect(() => setIsMobileView(!mediaMatches.sm))
+  createEffect(
+    on(
+      [() => follows?.authors, () => props.author, following],
+      ([followingAuthors, currentAuthor, _]) => {
+        setIsFollowed(
+          Boolean(followingAuthors?.some((followedAuthor) => followedAuthor.id === currentAuthor?.id))
+        )
+      },
+      { defer: true }
+    )
+  )
 
-  createEffect(() => {
-    setIsMobileView(!mediaMatches.sm)
-  })
-
-  const { setFollowing } = useFollowing()
-  const { changeSearchParams } = useRouter()
+  const navigate = useNavigate()
   const { t, formatDate, lang } = useLocalize()
 
   const initChat = () => {
     // eslint-disable-next-line solid/reactivity
     requireAuthentication(() => {
-      openPage(router, 'inbox')
-      changeSearchParams({
-        initChat: props.author.id.toString()
-      })
+      props.author?.id && navigate(`/inbox/${props.author?.id}`, { replace: true })
     }, 'discussions')
   }
 
   const name = createMemo(() => {
-    if (lang() !== 'ru' && isCyrillic(props.author.name)) {
+    if (lang() !== 'ru' && isCyrillic(props.author.name || '')) {
       if (props.author.name === 'Дискурс') {
         return 'Discours'
       }
 
-      return translit(props.author.name)
+      return translit(props.author.name || '')
     }
 
     return props.author.name
   })
 
-  createEffect(
-    on(
-      () => props.isFollowed,
-      () => {
-        setIsFollowed(props.isFollowed.value)
-      }
-    )
-  )
-
   const handleFollowClick = () => {
-    const value = !isFollowed()
-    requireAuthentication(() => {
-      setIsFollowed(value)
-      setFollowing(FollowingEntity.Author, props.author.slug, value)
-    }, 'subscribe')
+    requireAuthentication(async () => {
+      const handle = isFollowed() ? unfollow : follow
+      await handle(FollowingEntity.Author, props.author.slug)
+    }, 'follow')
+  }
+
+  const handleClick = () => {
+    console.debug('[AuthorBadge.handleClick]', props.author.slug)
+    props.onClick?.()
   }
 
   return (
-    <div class={clsx(styles.AuthorBadge, { [styles.nameOnly]: props.nameOnly })}>
+    <div class={clsx(styles.AuthorBadge, { [styles.nameOnly]: props.nameOnly })} onClick={handleClick}>
       <div class={styles.basicInfo}>
         <Userpic
           hasLink={true}
           size={isMobileView() ? 'M' : 'L'}
-          name={name()}
-          userpic={props.author.pic}
+          name={name() || ''}
+          userpic={props.author.pic || ''}
           slug={props.author.slug}
         />
         <ConditionalWrapper
           condition={!props.inviteView}
           wrapper={(children) => (
-            <a href={`/author/${props.author.slug}`} class={styles.info}>
+            <a href={`/@${props.author.slug}`} class={styles.info}>
               {children}
             </a>
           )}
@@ -110,22 +109,25 @@ export const AuthorBadge = (props: Props) => {
               fallback={
                 <div class={styles.bio}>
                   {t('Registered since {date}', {
-                    date: formatDate(new Date(props.author.created_at * 1000))
+                    date: formatDate(new Date((props.author.created_at || 0) * 1000))
                   })}
                 </div>
               }
             >
               <Match when={props.author.bio}>
-                <div class={clsx('text-truncate', styles.bio)} innerHTML={props.author.bio} />
+                <div class={clsx('text-truncate', styles.bio)} innerHTML={props.author.bio || ''} />
               </Match>
             </Switch>
-            <Show when={props.author?.stat}>
+            <Show when={props.author?.stat && !props.subscriptionsMode}>
               <div class={styles.bio}>
-                <Show when={props.author?.stat.shouts > 0}>
-                  <div>{t('PublicationsWithCount', { count: props.author.stat?.shouts ?? 0 })}</div>
+                <Show when={(props.author?.stat?.shouts || 0) > 0}>
+                  <div>{t('some posts', { count: props.author.stat?.shouts ?? 0 })}</div>
                 </Show>
-                <Show when={props.author?.stat.followers > 0}>
-                  <div>{t('FollowersWithCount', { count: props.author.stat?.followers ?? 0 })}</div>
+                <Show when={(props.author?.stat?.comments || 0) > 0}>
+                  <div>{t('some comments', { count: props.author.stat?.comments ?? 0 })}</div>
+                </Show>
+                <Show when={(props.author?.stat?.followers || 0) > 0}>
+                  <div>{t('some followers', { count: props.author.stat?.followers ?? 0 })}</div>
                 </Show>
               </div>
             </Show>
@@ -134,55 +136,11 @@ export const AuthorBadge = (props: Props) => {
       </div>
       <Show when={props.author.slug !== author()?.slug && !props.nameOnly}>
         <div class={styles.actions}>
-          <Show
-            when={!props.minimizeSubscribeButton}
-            fallback={<CheckButton text={t('Follow')} checked={isFollowed()} onClick={handleFollowClick} />}
-          >
-            <Show
-              when={isFollowed()}
-              fallback={
-                <Button
-                  variant={props.iconButtons ? 'secondary' : 'bordered'}
-                  size="S"
-                  value={
-                    <Show when={props.iconButtons} fallback={t('Subscribe')}>
-                      <Icon name="author-subscribe" class={stylesButton.icon} />
-                    </Show>
-                  }
-                  onClick={handleFollowClick}
-                  isSubscribeButton={true}
-                  class={clsx(styles.actionButton, {
-                    [styles.iconed]: props.iconButtons,
-                    [stylesButton.subscribed]: isFollowed()
-                  })}
-                />
-              }
-            >
-              <Button
-                variant={props.iconButtons ? 'secondary' : 'bordered'}
-                size="S"
-                value={
-                  <Show
-                    when={props.iconButtons}
-                    fallback={
-                      <>
-                        <span class={styles.actionButtonLabel}>{t('Following')}</span>
-                        <span class={styles.actionButtonLabelHovered}>{t('Unfollow')}</span>
-                      </>
-                    }
-                  >
-                    <Icon name="author-unsubscribe" class={stylesButton.icon} />
-                  </Show>
-                }
-                onClick={handleFollowClick}
-                isSubscribeButton={true}
-                class={clsx(styles.actionButton, {
-                  [styles.iconed]: props.iconButtons,
-                  [stylesButton.subscribed]: isFollowed()
-                })}
-              />
-            </Show>
-          </Show>
+          <FollowingButton
+            action={handleFollowClick}
+            isFollowed={isFollowed()}
+            actionMessageType={following()?.slug === props.author.slug ? following()?.type : undefined}
+          />
           <Show when={props.showMessageButton}>
             <Button
               variant={props.iconButtons ? 'secondary' : 'bordered'}
@@ -197,8 +155,8 @@ export const AuthorBadge = (props: Props) => {
       <Show when={props.inviteView}>
         <CheckButton
           text={t('Invite')}
-          checked={props.selected}
-          onClick={() => props.onInvite(props.author.id)}
+          checked={Boolean(props.selected)}
+          onClick={() => props.onInvite?.(props.author.id)}
         />
       </Show>
     </div>

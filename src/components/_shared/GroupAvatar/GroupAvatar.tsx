@@ -1,15 +1,14 @@
 import { clsx } from 'clsx'
 import { For } from 'solid-js'
 
-import { Author } from '../../../graphql/schema/core.gen'
-import { NotificationAuthor } from '../../../graphql/schema/notifier.gen'
+import { Author } from '~/graphql/schema/core.gen'
 import { Userpic } from '../../Author/Userpic'
 
 import styles from './GroupAvatar.module.scss'
 
 type Props = {
   class?: string
-  authors: Author[] | NotificationAuthor[]
+  authors: Author[]
 }
 
 export const GroupAvatar = (props: Props) => {
@@ -37,7 +36,12 @@ export const GroupAvatar = (props: Props) => {
     >
       <For each={displayedAvatars}>
         {(author: Author) => (
-          <Userpic size={avatarSize()} name={author.name} userpic={author.pic} class={styles.item} />
+          <Userpic
+            size={avatarSize()}
+            name={author.name || ''}
+            userpic={author.pic || ''}
+            class={styles.item}
+          />
         )}
       </For>
       {props.authors.length > 4 && <div class={styles.moreUsers}>+{props.authors?.length - 3}</div>}

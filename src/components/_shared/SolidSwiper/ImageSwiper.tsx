@@ -1,17 +1,17 @@
 import { clsx } from 'clsx'
 import { For, Show, createEffect, createSignal, on, onCleanup, onMount } from 'solid-js'
 import SwiperCore from 'swiper'
-import { Manipulation, Navigation, Pagination } from 'swiper/modules'
+import { HashNavigation, Manipulation, Navigation, Pagination } from 'swiper/modules'
 import { throttle } from 'throttle-debounce'
 
-import { MediaItem } from '../../../pages/types'
-import { getImageUrl } from '../../../utils/getImageUrl'
+import { getFileUrl } from '~/lib/getThumbUrl'
+import { MediaItem } from '~/types/mediaitem'
 import { Icon } from '../Icon'
 import { Image } from '../Image'
-import { Lightbox } from '../Lightbox'
-
 import { SwiperRef } from './swiper'
 
+import { useSearchParams } from '@solidjs/router'
+import { Lightbox } from '../Lightbox'
 import styles from './Swiper.module.scss'
 
 type Props = {
@@ -25,24 +25,27 @@ type Props = {
 const MIN_WIDTH = 540
 
 export const ImageSwiper = (props: Props) => {
-  const mainSwipeRef: { current: SwiperRef } = { current: null }
-  const thumbSwipeRef: { current: SwiperRef } = { current: null }
-  const swiperMainContainer: { current: HTMLDivElement } = { current: null }
+  let mainSwipeRef: SwiperRef | null
+  let thumbSwipeRef: SwiperRef | null
+  let swiperMainContainer: HTMLDivElement | null
   const [slideIndex, setSlideIndex] = createSignal(0)
   const [isMobileView, setIsMobileView] = createSignal(false)
-  const [selectedImage, setSelectedImage] = createSignal('')
+  const [selectedImage, setSelectedImage] = createSignal<string>('')
+  const [searchParams, changeSearchParams] = useSearchParams<{ slide: string }>()
 
   const handleSlideChange = () => {
-    thumbSwipeRef.current.swiper.slideTo(mainSwipeRef.current.swiper.activeIndex)
-    setSlideIndex(mainSwipeRef.current.swiper.activeIndex)
+    const activeIndex = mainSwipeRef?.swiper.activeIndex || 0
+    thumbSwipeRef?.swiper.slideTo(activeIndex)
+    setSlideIndex(activeIndex)
+    changeSearchParams({ slide: `${activeIndex + 1}` })
   }
 
   createEffect(
     on(
       () => props.images.length,
-      () => {
-        mainSwipeRef.current?.swiper.update()
-        thumbSwipeRef.current?.swiper.update()
+      (_) => {
+        mainSwipeRef?.swiper.update()
+        thumbSwipeRef?.swiper.update()
       },
       { defer: true }
     )
@@ -51,8 +54,19 @@ export const ImageSwiper = (props: Props) => {
   onMount(async () => {
     const { register } = await import('swiper/element/bundle')
     register()
-    SwiperCore.use([Pagination, Navigation, Manipulation])
-    mainSwipeRef.current?.swiper?.on('slideChange', handleSlideChange)
+    SwiperCore.use([Pagination, Navigation, Manipulation, HashNavigation])
+    while (!mainSwipeRef?.swiper) {
+      await new Promise((resolve) => setTimeout(resolve, 10)) // wait 10 ms
+    }
+    mainSwipeRef?.swiper.on('slideChange', handleSlideChange)
+    const initialSlide = searchParams?.slide ? Number.parseInt(searchParams?.slide) - 1 : 0
+    if (initialSlide && !Number.isNaN(initialSlide) && initialSlide < props.images.length) {
+      mainSwipeRef?.swiper.slideTo(initialSlide, 0)
+    } else {
+      changeSearchParams({ slide: '1' })
+    }
+
+    mainSwipeRef?.swiper.init()
   })
 
   onMount(() => {
@@ -74,28 +88,28 @@ export const ImageSwiper = (props: Props) => {
     })
   })
 
-  const openLightbox = (image) => {
+  const openLightbox = (image: string) => {
     setSelectedImage(image)
   }
+
   const handleLightboxClose = () => {
-    setSelectedImage()
+    setSelectedImage('')
   }
 
-  const handleImageClick = (event) => {
-    const src = event.target.src
-
-    openLightbox(getImageUrl(src))
+  const handleImageClick = (imageIndex: number) => {
+    const image: MediaItem = props.images[imageIndex]
+    openLightbox(getFileUrl(image.source || ''))
   }
 
   return (
     <div class={clsx(styles.Swiper, styles.articleMode, { [styles.mobileView]: isMobileView() })}>
-      <div class={styles.container} ref={(el) => (swiperMainContainer.current = el)}>
+      <div class={styles.container} ref={(el) => (swiperMainContainer = el)}>
         <Show when={props.images.length > 0}>
           <div class={clsx(styles.holder, styles.thumbsHolder)}>
             <div class={styles.thumbs}>
               <swiper-container
                 class={'thumbSwiper'}
-                ref={(el) => (thumbSwipeRef.current = el)}
+                ref={(el) => (thumbSwipeRef = el)}
                 slides-per-view={'auto'}
                 space-between={isMobileView() ? 20 : 10}
                 auto-scroll-offset={1}
@@ -103,6 +117,9 @@ export const ImageSwiper = (props: Props) => {
                 watch-slides-visibility={true}
                 direction={'horizontal'}
                 slides-per-group-auto={true}
+                hash-navigation={{
+                  watchState: true
+                }}
               >
                 <For each={props.images}>
                   {(slide, index) => (
@@ -112,7 +129,7 @@ export const ImageSwiper = (props: Props) => {
                       <div
                         class={clsx(styles.imageThumb)}
                         style={{
-                          'background-image': `url(${getImageUrl(slide.url, { width: 110, height: 75 })})`
+                          'background-image': `url(${getFileUrl(slide.url, { width: 110, height: 75 })})`
                         }}
                       />
                     </swiper-slide>
@@ -123,7 +140,7 @@ export const ImageSwiper = (props: Props) => {
                 class={clsx(styles.navigation, styles.thumbsNav, styles.prev, {
                   [styles.disabled]: slideIndex() === 0
                 })}
-                onClick={() => thumbSwipeRef.current.swiper.slidePrev()}
+                onClick={() => thumbSwipeRef?.swiper.slidePrev()}
               >
                 <Icon name="swiper-l-arr" class={styles.icon} />
               </div>
@@ -131,7 +148,7 @@ export const ImageSwiper = (props: Props) => {
                 class={clsx(styles.navigation, styles.thumbsNav, styles.next, {
                   [styles.disabled]: slideIndex() + 1 === props.images.length
                 })}
-                onClick={() => thumbSwipeRef.current.swiper.slideNext()}
+                onClick={() => thumbSwipeRef?.swiper.slideNext()}
               >
                 <Icon name="swiper-r-arr" class={styles.icon} />
               </div>
@@ -139,7 +156,7 @@ export const ImageSwiper = (props: Props) => {
           </div>
           <div class={styles.holder}>
             <swiper-container
-              ref={(el) => (mainSwipeRef.current = el)}
+              ref={(el) => (mainSwipeRef = el)}
               slides-per-view={1}
               thumbs-swiper={'.thumbSwiper'}
               observer={true}
@@ -149,8 +166,8 @@ export const ImageSwiper = (props: Props) => {
                 {(slide, index) => (
                   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
                   // @ts-ignore
-                  <swiper-slide lazy="true" virtual-index={index()}>
-                    <div class={styles.image} onClick={handleImageClick}>
+                  <swiper-slide lazy="true" virtual-index={index()} data-hash={index() + 1}>
+                    <div class={styles.image} onClick={() => handleImageClick(index())}>
                       <Image src={slide.url} alt={slide.title} width={800} />
                     </div>
                   </swiper-slide>
@@ -161,7 +178,7 @@ export const ImageSwiper = (props: Props) => {
               class={clsx(styles.navigation, styles.prev, {
                 [styles.disabled]: slideIndex() === 0
               })}
-              onClick={() => mainSwipeRef.current.swiper.slidePrev()}
+              onClick={() => mainSwipeRef?.swiper.slidePrev()}
             >
               <Icon name="swiper-l-arr" class={styles.icon} />
             </div>
@@ -169,7 +186,7 @@ export const ImageSwiper = (props: Props) => {
               class={clsx(styles.navigation, styles.next, {
                 [styles.disabled]: slideIndex() + 1 === props.images.length
               })}
-              onClick={() => mainSwipeRef.current.swiper.slideNext()}
+              onClick={() => mainSwipeRef?.swiper.slideNext()}
             >
               <Icon name="swiper-r-arr" class={styles.icon} />
             </div>

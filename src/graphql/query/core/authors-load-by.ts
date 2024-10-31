@@ -1,7 +1,7 @@
 import { gql } from '@urql/core'
 
 export default gql`
-  query AuthorsAllQuery($by: AuthorsBy!, $limit: Int, $offset: Int) {
+  query LoadAuthorsBy($by: AuthorsBy!, $limit: Int, $offset: Int) {
     load_authors_by(by: $by, limit: $limit, offset: $offset) {
       id
       slug
@@ -14,7 +14,7 @@ export default gql`
         authors
         followers
         rating
-        comments: commented
+        comments
         rating_shouts
         rating_comments
       }

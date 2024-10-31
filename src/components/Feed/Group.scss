@@ -1,3 +1,5 @@
+@use 'sass:math';
+
 .layout-icon {
   background: #fff;
   border-radius: 100%;
@@ -15,7 +17,9 @@
     background: #000;
 
     .icon {
-      filter: invert(1);
+        // filter: invert(1);
+        fill: var(--icon-color-invert);
+        color: var(--icon-color);
     }
   }
 
@@ -35,9 +39,6 @@
 }
 
 .floor--group {
-  background: #e8e5f0;
-  padding: 4rem 0 0;
-
   @include media-breakpoint-up(md) {
     padding-bottom: 3rem;
   }
@@ -45,8 +46,11 @@
   @include media-breakpoint-down(sm) {
     .col-lg-12 {
       .row {
-        margin: 0 0 0 divide(-$container-padding-x, 2);
+        margin: 0 0 0 math.div(-$container-padding-x, 2);
       }
     }
   }
+
+  background: #e8e5f0;
+  padding: 4rem 0 0;
 }

@@ -1,10 +1,9 @@
 import { clsx } from 'clsx'
 import { Show, createSignal } from 'solid-js'
+import { Icon } from '~/components/_shared/Icon'
+import { useOutsideClickHandler } from '~/lib/useOutsideClickHandler'
 
-import { MediaItem } from '../../../pages/types'
-import { useOutsideClickHandler } from '../../../utils/useOutsideClickHandler'
-import { Icon } from '../../_shared/Icon'
-
+import { MediaItem } from '~/types/mediaitem'
 import styles from './AudioPlayer.module.scss'
 
 type Props = {
@@ -17,10 +16,7 @@ type Props = {
 }
 
 export const PlayerHeader = (props: Props) => {
-  const volumeContainerRef: { current: HTMLDivElement } = {
-    current: null
-  }
-
+  let volumeContainerRef: HTMLDivElement | undefined
   const [isVolumeBarOpened, setIsVolumeBarOpened] = createSignal(false)
 
   const toggleVolumeBar = () => {
@@ -65,7 +61,7 @@ export const PlayerHeader = (props: Props) => {
         >
           <Icon name="player-arrow" />
         </button>
-        <div ref={(el) => (volumeContainerRef.current = el)} class={styles.volumeContainer}>
+        <div ref={(el) => (volumeContainerRef = el)} class={styles.volumeContainer}>
           <Show when={isVolumeBarOpened()}>
             <input
               type="range"
@@ -78,7 +74,7 @@ export const PlayerHeader = (props: Props) => {
               onChange={({ target }) => props.onVolumeChange(Number(target.value))}
             />
           </Show>
-          <button onClick={toggleVolumeBar} class={styles.volumeButton} role="button" aria-label="Volume">
+          <button onClick={toggleVolumeBar} class={styles.volumeButton} aria-label="Volume">
             <Icon name="volume" />
           </button>
         </div>

@@ -1,116 +1,91 @@
-import ssrPlugin from 'vike/plugin'
-import { defineConfig } from 'vite'
-import mkcert from 'vite-plugin-mkcert'
+// biome-ignore lint/correctness/noNodejsModules: build
+import path from 'node:path'
+import dotenv from 'dotenv'
+import { CSSOptions, LogLevel, LoggerOptions, createLogger, defineConfig } from 'vite'
+import { PolyfillOptions, nodePolyfills } from 'vite-plugin-node-polyfills'
 import sassDts from 'vite-plugin-sass-dts'
-import solidPlugin from 'vite-plugin-solid'
 
-const cssModuleHMR = () => {
-  return {
-    enforce: 'post',
-    name: 'css-module-hmr',
-    apply: 'serve',
-    handleHotUpdate(context) {
-      const { modules } = context
+// Load environment variables from .env file
+dotenv.config()
 
-      modules.forEach((module) => {
-        if (module.id.includes('.module.scss')) {
-          module.isSelfAccepting = true
-        }
-      })
+export const isDev = process.env.NODE_ENV !== 'production' && !process.env.CI
+console.log(`[vite.config] ${process.env.NODE_ENV} mode`)
+
+const customLogger = createLogger(
+  'debug' as LogLevel,
+  {
+    warn: (message: string, options: LoggerOptions) => {
+      console.debug(message)
+      if (message.startsWith('Future global-builtin')) {
+        return // Игнорируем это конкретное предупреждение
+      }
+      console.warn(message, options)
     }
-  }
-}
+  } as LoggerOptions
+)
 
-const PATH_PREFIX = '/src/'
+const polyfillOptions = {
+  include: ['path', 'stream', 'util'],
+  exclude: ['http'],
+  globals: { Buffer: true },
+  overrides: { fs: 'memfs' },
+  protocolImports: true
+} as PolyfillOptions
 
-const getDevCssClassPrefix = (filename: string): string => {
-  return filename
-    .slice(filename.indexOf(PATH_PREFIX) + PATH_PREFIX.length)
-    .replace('.module.scss', '')
-    .replace(/[/?\\]/g, '-')
-}
-
-const devGenerateScopedName = (name: string, filename: string, _css: string) =>
-  `${getDevCssClassPrefix(filename)}__${name}`
-
-export default defineConfig(({ mode, command }) => {
-  const plugins = [
-    solidPlugin({ ssr: true }),
-    ssrPlugin({ includeAssetsImportedByServer: true }),
-    sassDts(),
-    cssModuleHMR()
-  ]
-
-  if (command === 'serve') {
-    plugins.push(mkcert())
-  }
-
-  const isDev = mode === 'development'
-
-  return {
-    envPrefix: 'PUBLIC_',
-    plugins,
-    server: {
-      cors: isDev,
-      https: {},
-      port: 3000
-    },
-    css: {
-      devSourcemap: isDev,
-      preprocessorOptions: {
-        scss: { additionalData: '@import "src/styles/imports";\n' }
-      },
-      modules: {
-        generateScopedName: isDev ? devGenerateScopedName : '[hash:base64:5]'
+export default defineConfig({
+  resolve: {
+    alias: {
+      '~': path.resolve('./src'),
+      '@': path.resolve('./public'),
+      '/icons': path.resolve('./public/icons'),
+      '/fonts': path.resolve('./public/fonts')
+    }
+  },
+  envPrefix: 'PUBLIC_',
+  css: {
+    preprocessorOptions: {
+      scss: {
+        api: 'modern-compiler',
+        quietDeps: true,
+        silenceDeprecations: ['mixed-decls', 'legacy-js-api'], // 'global-builtin'],
+        additionalData: (content: string) => `@use '~/styles/global' as *;\n${content}`,
+        includePaths: ['./public', './src/styles', './node_modules']
+      }
+    } as CSSOptions['preprocessorOptions']
+  },
+  customLogger,
+  plugins: [nodePolyfills(polyfillOptions), sassDts()],
+  build: {
+    target: 'esnext',
+    sourcemap: true,
+    minify: 'terser', // explicit terser usage
+    terserOptions: {
+      compress: {
+        drop_console: true // removes console logs in production
       }
     },
-    build: {
-      rollupOptions: {
-        external: []
-      },
-      chunkSizeWarningLimit: 1024,
-      target: 'esnext'
+    rollupOptions: {
+      plugins: [], // visualizer()]
+      output: {
+        manualChunks: {
+          icons: ['./src/components/_shared/Icon/Icon.tsx'],
+          session: ['./src/context/session.tsx'],
+          localize: ['./src/context/localize.tsx'],
+          editor: ['./src/context/editor.tsx'],
+          connect: ['./src/context/connect.tsx']
+        }
+      }
     },
-    ssr: {
-      noExternal: [
-        'solid-js',
-        '@nanostores/solid',
-        '@urql/core',
-        'wonka',
-        'solid-popper',
-        'seroval',
-        'seroval-plugins',
-        'seroval-plugins/web',
-        '@solid-primitives/share',
-        'i18next',
-        'js-cookie',
-        '@solid-primitives/memo',
-        '@solid-primitives/media',
-        '@solid-primitives/storage',
-        '@solid-primitives/utils',
-        '@solid-primitives/rootless',
-        'solid-tiptap',
-        '@tiptap/extension-document',
-        '@tiptap/core',
-        '@tiptap/pm',
-        'prosemirror-state',
-        'prosemirror-model',
-        'prosemirror-transform',
-        'prosemirror-commands',
-        'prosemirror-schema-list',
-        '@tiptap/extension-text',
-        '@tiptap/extension-paragraph',
-        '@tiptap/extension-bold',
-        '@tiptap/extension-italic',
-        '@tiptap/extension-blockquote',
-        '@solid-primitives/upload',
-        '@tiptap/extension-placeholder',
-        'prosemirror-view',
-        '@tiptap/extension-link',
-        '@tiptap/extension-image',
-        '@tiptap/extension-character-count',
-        'clsx'
-      ]
+    commonjsOptions: {
+      ignore: ['punycode']
     }
+  },
+  define: {
+    'process.env': process.env,
+    global: 'globalThis'
+  },
+  optimizeDeps: {
+    include: ['solid-tiptap', 'buffer'],
+    exclude: ['punycode']
   }
 })

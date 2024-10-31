@@ -1,39 +1,44 @@
 import { clsx } from 'clsx'
 import { Show, createEffect, createSignal, on } from 'solid-js'
 
-import { useFollowing } from '../../../context/following'
-import { useLocalize } from '../../../context/localize'
-import { useMediaQuery } from '../../../context/mediaQuery'
-import { useSession } from '../../../context/session'
-import { FollowingEntity, Topic } from '../../../graphql/schema/core.gen'
-import { capitalize } from '../../../utils/capitalize'
-import { getImageUrl } from '../../../utils/getImageUrl'
-import { Button } from '../../_shared/Button'
-import { CheckButton } from '../../_shared/CheckButton'
-
-import { FollowedInfo } from '../../../pages/types'
+import { FollowingButton } from '~/components/_shared/FollowingButton'
+import { useFollowing } from '~/context/following'
+import { useLocalize } from '~/context/localize'
+import { useSession } from '~/context/session'
+import { FollowingEntity, Topic } from '~/graphql/schema/core.gen'
+import { getFileUrl } from '~/lib/getThumbUrl'
+import { mediaMatches } from '~/lib/mediaQuery'
+import { capitalize } from '~/utils/capitalize'
 import styles from './TopicBadge.module.scss'
 
 type Props = {
   topic: Topic
-  minimizeSubscribeButton?: boolean
-  isFollowed?: FollowedInfo
+  minimize?: boolean
   showStat?: boolean
+  subscriptionsMode?: boolean
 }
 
 export const TopicBadge = (props: Props) => {
   const { t, lang } = useLocalize()
-  const { mediaMatches } = useMediaQuery()
   const [isMobileView, setIsMobileView] = createSignal(false)
   const { requireAuthentication } = useSession()
-  const { setFollowing, loading: subLoading } = useFollowing()
   const [isFollowed, setIsFollowed] = createSignal<boolean>()
+  const { follow, unfollow, follows, following } = useFollowing()
+
+  createEffect(
+    on([() => follows, () => props.topic], ([flws, tpc]) => {
+      if (flws && tpc) {
+        const followed = follows?.topics?.some((topics) => topics.id === props.topic?.id)
+        setIsFollowed(followed)
+      }
+    })
+  )
 
   const handleFollowClick = () => {
-    const value = !isFollowed()
     requireAuthentication(() => {
-      setIsFollowed(value)
-      setFollowing(FollowingEntity.Topic, props.topic.slug, value)
+      isFollowed()
+        ? follow(FollowingEntity.Topic, props.topic.slug)
+        : unfollow(FollowingEntity.Topic, props.topic.slug)
     }, 'subscribe')
   }
 
@@ -41,86 +46,66 @@ export const TopicBadge = (props: Props) => {
     setIsMobileView(!mediaMatches.sm)
   })
 
-  createEffect(
-    on(
-      () => props.isFollowed,
-      () => {
-        setIsFollowed(props.isFollowed.value)
-      }
-    )
-  )
-
   const title = () =>
     lang() === 'en' ? capitalize(props.topic.slug.replaceAll('-', ' ')) : props.topic.title
 
   return (
-    <div class={styles.TopicBadge}>
+    <div class={clsx(styles.TopicBadge, { [styles.TopicBadgeSubscriptionsMode]: props.subscriptionsMode })}>
       <div class={styles.content}>
         <div class={styles.basicInfo}>
-          <a
-            href={`/topic/${props.topic.slug}`}
-            class={clsx(styles.picture, {
-              [styles.withImage]: props.topic.pic,
-              [styles.smallSize]: isMobileView()
-            })}
-            style={
-              props.topic.pic && {
-                'background-image': `url('${getImageUrl(props.topic.pic, { width: 40, height: 40 })}')`
+          <Show when={props.subscriptionsMode}>
+            <a
+              href={`/topic/${props.topic.slug}`}
+              class={clsx(styles.picture, {
+                [styles.withImage]: props.topic.pic,
+                [styles.smallSize]: isMobileView()
+              })}
+              style={
+                (props.topic?.pic || '') && {
+                  'background-image': `url('${getFileUrl(props.topic?.pic || '', { width: 40, height: 40 })}')`
+                }
               }
-            }
-          />
+            />
+          </Show>
+
           <a href={`/topic/${props.topic.slug}`} class={styles.info}>
             <span class={styles.title}>{title()}</span>
+
             <Show
               when={props.topic.body}
               fallback={
                 <div class={styles.description}>
-                  {t('PublicationsWithCount', { count: props.topic?.stat?.shouts ?? 0 })}
+                  {t('some posts', { count: props.topic?.stat?.shouts ?? 0 })}
                 </div>
               }
             >
-              <div class={clsx('text-truncate', styles.description)}>{props.topic.body}</div>
+              <div innerHTML={props.topic?.body || ''} class={clsx('text-truncate', styles.description)} />
             </Show>
           </a>
         </div>
-
         <div class={styles.actions}>
-          <Show
-            when={!props.minimizeSubscribeButton}
-            fallback={
-              <CheckButton text={t('Follow')} checked={Boolean(isFollowed())} onClick={handleFollowClick} />
-            }
-          >
-            <Show
-              when={isFollowed()}
-              fallback={
-                <Button
-                  variant="primary"
-                  size="S"
-                  value={subLoading() ? t('subscribing...') : t('Subscribe')}
-                  onClick={handleFollowClick}
-                  class={styles.subscribeButton}
-                />
-              }
-            >
-              <Button
-                onClick={handleFollowClick}
-                variant="bordered"
-                size="S"
-                value={t('Following')}
-                class={styles.subscribeButton}
-              />
-            </Show>
-          </Show>
+          <FollowingButton
+            isFollowed={Boolean(isFollowed())}
+            action={handleFollowClick}
+            actionMessageType={following?.()?.slug === props.topic.slug ? following()?.type : undefined}
+          />
         </div>
       </div>
-      <div class={styles.stats}>
-        <span class={styles.statsItem}>{t('shoutsWithCount', { count: props.topic?.stat?.shouts })}</span>
-        <span class={styles.statsItem}>{t('authorsWithCount', { count: props.topic?.stat?.authors })}</span>
-        <span class={styles.statsItem}>
-          {t('followersWithCount', { count: props.topic?.stat?.followers })}
-        </span>
-      </div>
+
+      <Show when={!props.subscriptionsMode}>
+        <div class={styles.stats}>
+          <span class={styles.statsItem}>{t('some shouts', { count: props.topic?.stat?.shouts })}</span>
+          <span class={styles.statsItem}>{t('some authors', { count: props.topic?.stat?.authors })}</span>
+          <span class={styles.statsItem}>
+            {t('some followers', { count: props.topic?.stat?.followers })}
+          </span>
+          <Show when={props.topic?.stat?.comments}>
+            <span class={styles.statsItem}>
+              {t('some comments', { count: props.topic?.stat?.comments ?? 0 })}
+            </span>
+          </Show>
+        </div>
+      </Show>
     </div>
   )
 }

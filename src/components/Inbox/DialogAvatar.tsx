@@ -1,7 +1,7 @@
 import { clsx } from 'clsx'
 import { Show, createMemo } from 'solid-js'
 
-import { getImageUrl } from '../../utils/getImageUrl'
+import { getFileUrl } from '~/lib/getThumbUrl'
 import './DialogCard.module.scss'
 
 import styles from './DialogAvatar.module.scss'
@@ -31,7 +31,11 @@ const colors = [
 ]
 
 const getById = (letter: string) =>
-  colors[Math.abs(Number(BigInt(letter.toLowerCase().codePointAt(0) - 97) % BigInt(colors.length)))]
+  colors[
+    Math.abs(
+      Number(BigInt(((letter || '').toLowerCase()?.codePointAt(0) || 97) - 97) % BigInt(colors.length))
+    )
+  ]
 
 const DialogAvatar = (props: Props) => {
   const nameFirstLetter = createMemo(() => props.name.slice(0, 1))
@@ -51,7 +55,15 @@ const DialogAvatar = (props: Props) => {
       <Show when={Boolean(props.url)} fallback={<div class={styles.letter}>{nameFirstLetter()}</div>}>
         <div
           class={styles.imageHolder}
-          style={{ 'background-image': `url(${getImageUrl(props.url, { width: 40, height: 40 })})` }}
+          style={{
+            'background-image': `url(
+            ${
+              props.url?.includes('discours.io')
+                ? getFileUrl(props.url || '', { width: 40, height: 40 })
+                : props.url
+            }
+            )`
+          }}
         />
       </Show>
     </div>

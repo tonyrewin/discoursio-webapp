@@ -1,10 +1,10 @@
-import type { ChatMember } from '../../graphql/schema/chat.gen'
+import type { ChatMember } from '~/graphql/schema/chat.gen'
 
 import { clsx } from 'clsx'
 import { Match, Show, Switch, createMemo } from 'solid-js'
 
-import { useLocalize } from '../../context/localize'
-import { Author } from '../../graphql/schema/core.gen'
+import { useLocalize } from '~/context/localize'
+import { Author } from '~/graphql/schema/core.gen'
 import { AuthorBadge } from '../Author/AuthorBadge'
 
 import DialogAvatar from './DialogAvatar'
@@ -47,7 +47,7 @@ const DialogCard = (props: DialogProps) => {
               when={props.isChatHeader}
               fallback={
                 <div class={styles.avatar}>
-                  <DialogAvatar name={props.members[0]?.slug} url={props.members[0]?.pic} />
+                  <DialogAvatar name={props.members[0]?.slug} url={props.members[0]?.pic || ''} />
                 </div>
               }
             >
@@ -78,9 +78,11 @@ const DialogCard = (props: DialogProps) => {
           </div>
           <div class={styles.activity}>
             <Show when={props.lastUpdate}>
-              <div class={styles.time}>{formatTime(new Date(props.lastUpdate * 1000))}</div>
+              <div class={styles.time}>
+                {formatTime(props.lastUpdate ? new Date(props.lastUpdate * 1000) : new Date()) || ''}
+              </div>
             </Show>
-            <Show when={props.counter > 0}>
+            <Show when={(props.counter || 0) > 0}>
               <div class={styles.counter}>
                 <span>{props.counter}</span>
               </div>

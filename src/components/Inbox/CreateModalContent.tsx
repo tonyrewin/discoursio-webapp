@@ -1,11 +1,10 @@
-import type { Author } from '../../graphql/schema/core.gen'
-
 import { For, createEffect, createSignal } from 'solid-js'
 
-import { useInbox } from '../../context/inbox'
-import { useLocalize } from '../../context/localize'
-import { hideModal } from '../../stores/ui'
-
+import { useInbox } from '~/context/inbox'
+import { useLocalize } from '~/context/localize'
+import { useUI } from '~/context/ui'
+import type { Author } from '~/graphql/schema/core.gen'
+import { Button } from '../_shared/Button/Button' // Импорт вашего компонента Button
 import InviteUser from './InviteUser'
 
 import styles from './CreateModalContent.module.scss'
@@ -17,6 +16,7 @@ type Props = {
 
 const CreateModalContent = (props: Props) => {
   const { t } = useLocalize()
+  const { hideModal } = useUI()
   const inviteUsers: inviteUser[] = props.users.map((user) => ({ ...user, selected: false }))
   const [chatTitle, setChatTitle] = createSignal<string>('')
   const [usersId, setUsersId] = createSignal<number[]>([])
@@ -44,11 +44,11 @@ const CreateModalContent = (props: Props) => {
     })
   })
 
-  const handleSetTheme = () => {
-    setChatTitle(textInput.value.length > 0 && textInput.value)
+  const handleSetTitle = () => {
+    setChatTitle((_) => (textInput.value.length > 0 && textInput.value) || '')
   }
 
-  const handleClick = (user) => {
+  const handleClick = (user: inviteUser) => {
     setCollectionToInvite((userCollection) => {
       return userCollection.map((clickedUser) =>
         user.id === clickedUser.id ? { ...clickedUser, selected: !clickedUser.selected } : clickedUser
@@ -58,8 +58,8 @@ const CreateModalContent = (props: Props) => {
 
   const handleCreate = async () => {
     try {
-      const initChat = await createChat(usersId(), chatTitle())
-      console.debug('[components.Inbox] create chat result:', initChat)
+      const result = await createChat(usersId(), chatTitle())
+      console.debug('[components.Inbox] create chat result:', result)
       hideModal()
       await loadChats()
     } catch (error) {
@@ -72,11 +72,11 @@ const CreateModalContent = (props: Props) => {
       <h4>{t('Create Chat')}</h4>
       {usersId().length > 1 && (
         <input
-          ref={textInput}
-          onInput={handleSetTheme}
+          ref={(el) => (textInput = el)}
+          onInput={handleSetTitle}
           type="text"
           required={true}
-          class="form-control form-control-lg fs-3"
+          class={styles.chatTitleInput}
           placeholder={t('Chat Title')}
         />
       )}
@@ -90,17 +90,15 @@ const CreateModalContent = (props: Props) => {
       </div>
 
       <div class={styles.footer}>
-        <button type="button" class="btn btn-lg fs-3 btn-outline-danger" onClick={reset}>
-          {t('Cancel')}
-        </button>
-        <button
+        <Button type="button" value={t('Cancel')} variant="danger" size="L" onClick={reset} />
+        <Button
           type="button"
-          class="btn btn-lg fs-3 btn-outline-primary"
+          value={usersId().length > 1 ? t('New group') : t('Create Chat')}
+          variant="primary"
+          size="L"
           onClick={handleCreate}
           disabled={usersId().length === 0}
-        >
-          {usersId().length > 1 ? t('Create Group') : t('Create Chat')}
-        </button>
+        />
       </div>
     </div>
   )

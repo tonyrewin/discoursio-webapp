@@ -2,13 +2,13 @@ import type { PopupProps } from '../_shared/Popup'
 
 import { For, createEffect, createSignal } from 'solid-js'
 
-import { useLocalize } from '../../context/localize'
+import { useLocalize } from '~/context/localize'
 import { Popup } from '../_shared/Popup'
 
 export type MessageActionType = 'reply' | 'copy' | 'pin' | 'forward' | 'select' | 'delete'
 
 type MessageActionsPopupProps = {
-  actionSelect?: (selectedAction) => void
+  actionSelect?: (selectedAction: MessageActionType) => void
 } & Omit<PopupProps, 'children'>
 
 export const MessageActionsPopup = (props: MessageActionsPopupProps) => {
@@ -23,7 +23,7 @@ export const MessageActionsPopup = (props: MessageActionsPopupProps) => {
     { name: t('Delete'), action: 'delete' }
   ]
   createEffect(() => {
-    if (props.actionSelect) props.actionSelect(selectedAction())
+    if (props.actionSelect) props.actionSelect(selectedAction() || 'select')
   })
   return (
     <Popup {...props} variant="tiny">
@@ -31,7 +31,7 @@ export const MessageActionsPopup = (props: MessageActionsPopupProps) => {
         <For each={actions}>
           {(item) => (
             <li
-              style={item.action === 'delete' && { color: 'red' }}
+              style={{ color: item.action === 'delete' ? 'red' : undefined }}
               onClick={() => setSelectedAction(item.action)}
             >
               {item.name}

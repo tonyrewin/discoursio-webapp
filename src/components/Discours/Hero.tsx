@@ -1,14 +1,13 @@
-import { useLocalize } from '../../context/localize'
-import { useRouter } from '../../stores/router'
-import { showModal } from '../../stores/ui'
-import { AuthModalSearchParams } from '../Nav/AuthModal/types'
+import { useLocalize } from '~/context/localize'
+import { useUI } from '~/context/ui'
 
+import { useSearchParams } from '@solidjs/router'
 import styles from './Hero.module.scss'
 
 export default () => {
   const { t } = useLocalize()
-  const { changeSearchParams } = useRouter<AuthModalSearchParams>()
-
+  const { showModal } = useUI()
+  const [, changeSearchParams] = useSearchParams()
   return (
     <div class={styles.aboutDiscours}>
       <div class="wide-container">
@@ -21,7 +20,7 @@ export default () => {
               )}
             />
             <div class={styles.aboutDiscoursActions}>
-              <a class="button" href="/create">
+              <a class="button" href="/edit/new">
                 {t('Create post')}
               </a>
               <a
@@ -35,7 +34,7 @@ export default () => {
               >
                 {t('Join the community')}
               </a>
-              <a class="button" href="/about/help">
+              <a class="button" href="/support">
                 {t('Support us')}
               </a>
             </div>

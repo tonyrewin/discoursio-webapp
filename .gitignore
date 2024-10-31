@@ -1,8 +1,9 @@
+.devcontainer
+.pnpm-store
 dist/
 node_modules/
 npm-debug.log*
 pnpm-debug.log*
-.vscode
 .env
 .env.production
 .DS_Store
@@ -23,3 +24,12 @@ bun.lockb
 /playwright/.cache/
 /plawright-report/
 /templates/dist/*
+target
+.github/dependabot.yml
+.output
+.vinxi
+*.pem
+edge.*
+.vscode/settings.json
+storybook-static
+app.config.*.js

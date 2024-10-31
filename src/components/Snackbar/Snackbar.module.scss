@@ -1,0 +1,39 @@
+.snackbar {
+  background-color: var(--default-color);
+  color: #fff;
+  font-size: 2rem;
+  font-weight: 500;
+  left: 0;
+  transition: background-color 0.3s;
+  position: absolute;
+  width: 100%;
+
+  &.error {
+    background-color: #d00820;
+  }
+
+  &.success {
+    .icon {
+      height: 1.8em;
+      margin-right: 0.5em;
+      margin-top: 0.1em;
+      width: 1.8em;
+    }
+  }
+}
+
+.content {
+  transition:
+    height 0.3s,
+    color 0.3s;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &.enter,
+  &.exitTo {
+    height: 0;
+    color: transparent;
+  }
+}

@@ -39,18 +39,19 @@ export const Popover = (props: Props) => {
 
   if (!props.disabled) {
     onMount(() => {
+      if (!anchor()) return
       showEvents.forEach((event) => {
-        anchor().addEventListener(event, handleMouseOver)
+        anchor()?.addEventListener(event, handleMouseOver)
       })
       hideEvents.forEach((event) => {
-        anchor().addEventListener(event, handleMouseOut)
+        anchor()?.addEventListener(event, handleMouseOut)
       })
       return () => {
         showEvents.forEach((event) => {
-          anchor().removeEventListener(event, handleMouseOver)
+          anchor()?.removeEventListener(event, handleMouseOver)
         })
         hideEvents.forEach((event) => {
-          anchor().removeEventListener(event, handleMouseOut)
+          anchor()?.removeEventListener(event, handleMouseOut)
         })
       }
     })
@@ -60,7 +61,7 @@ export const Popover = (props: Props) => {
     <>
       {props.children(setAnchor)}
       <Show when={show() && !props.disabled}>
-        <div ref={setPopper} class={styles.tooltip} role="tooltip">
+        <div ref={setPopper} class={styles.tooltip}>
           {props.content}
           <div class={styles.arrow} data-popper-arrow={true} />
         </div>

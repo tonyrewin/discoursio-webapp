@@ -1,12 +1,10 @@
 // TODO: additional entities list column + article
 
-import type { Author, Shout, Topic } from '../../graphql/schema/core.gen'
+import type { Author, Shout, Topic } from '~/graphql/schema/core.gen'
 
 import { clsx } from 'clsx'
 import { For, Show } from 'solid-js'
-
-import { useFollowing } from '../../context/following'
-import { useLocalize } from '../../context/localize'
+import { useLocalize } from '~/context/localize'
 import { AuthorBadge } from '../Author/AuthorBadge'
 import { TopicCard } from '../Topic/Card'
 import { Icon } from '../_shared/Icon'
@@ -30,7 +28,6 @@ type Props = {
 
 export const Beside = (props: Props) => {
   const { t } = useLocalize()
-  const { isOwnerSubscribed } = useFollowing()
 
   return (
     <Show when={!!props.beside?.slug && props.values?.length > 0}>
@@ -42,7 +39,7 @@ export const Beside = (props: Props) => {
                 class={clsx(
                   'col-lg-8',
                   styles[
-                    `besideRatingColumn${props.wrapper.charAt(0).toUpperCase() + props.wrapper.slice(1)}`
+                    `besideRatingColumn${props.wrapper?.charAt(0)?.toUpperCase() + props.wrapper.slice(1)}` as keyof typeof styles
                   ]
                 )}
               >
@@ -51,14 +48,14 @@ export const Beside = (props: Props) => {
                     <h4>{props.title}</h4>
 
                     <Show when={props.wrapper === 'author'}>
-                      <a href="/authors">
+                      <a href="/author">
                         {t('All authors')}
                         <Icon name="arrow-right" class={styles.icon} />
                       </a>
                     </Show>
 
                     <Show when={props.wrapper === 'topic'}>
-                      <a href="/topics">
+                      <a href="/topic">
                         {t('All topics')}
                         <Icon name="arrow-right" class={styles.icon} />
                       </a>
@@ -86,12 +83,7 @@ export const Beside = (props: Props) => {
                           />
                         </Show>
                         <Show when={props.wrapper === 'author'}>
-                          <AuthorBadge
-                            author={value as Author}
-                            isFollowed={{
-                              value: isOwnerSubscribed(value.id)
-                            }}
-                          />
+                          <AuthorBadge author={value as Author} />
                         </Show>
                         <Show when={props.wrapper === 'article' && value?.slug}>
                           <ArticleCard

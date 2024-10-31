@@ -1,9 +1,9 @@
-import type { ChatMember, Message as MessageType } from '../../graphql/schema/chat.gen'
+import type { ChatMember, Message as MessageType } from '~/graphql/schema/chat.gen'
 
 import { clsx } from 'clsx'
 import { Show, createSignal } from 'solid-js'
 
-import { useLocalize } from '../../context/localize'
+import { useLocalize } from '~/context/localize'
 import { Icon } from '../_shared/Icon'
 
 import DialogAvatar from './DialogAvatar'
@@ -29,10 +29,10 @@ export const Message = (props: Props) => {
 
   return (
     <div class={clsx(styles.Message, isOwn && styles.own)}>
-      <Show when={!isOwn && user}>
+      <Show when={!isOwn && user?.name}>
         <div class={styles.author}>
-          <DialogAvatar size="small" name={user.name} url={user.pic} />
-          <div class={styles.name}>{user.name}</div>
+          <DialogAvatar size="small" name={user?.name || ''} url={user?.pic || ''} />
+          <div class={styles.name}>{user?.name}</div>
         </div>
       </Show>
       <div class={clsx(styles.body, { [styles.popupVisible]: isPopupVisible() })}>
@@ -47,7 +47,7 @@ export const Message = (props: Props) => {
             />
           </div>
           <Show when={props.replyBody}>
-            <QuotedMessage body={props.replyBody} variant="inline" isOwn={isOwn} />
+            <QuotedMessage body={props.replyBody || ''} variant="inline" isOwn={isOwn} />
           </Show>
           <div innerHTML={props.content.body} />
         </div>

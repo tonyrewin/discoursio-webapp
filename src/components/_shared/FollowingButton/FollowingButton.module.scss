@@ -1,0 +1,31 @@
+.actionButton {
+  border-radius: 0.8rem !important;
+  margin-right: 0 !important;
+  width: 9em;
+
+  &.iconed {
+    padding: 6px !important;
+    min-width: 4rem;
+    width: unset;
+
+    &:hover img {
+      // filter: invert(1);
+      fill: var(--icon-color-invert);
+      color: var(--icon-color);
+    }
+  }
+
+  &:hover {
+    .actionButtonLabel {
+      display: none;
+    }
+
+    .actionButtonLabelHovered {
+      display: block;
+    }
+  }
+}
+
+.actionButtonLabelHovered {
+  display: none;
+}

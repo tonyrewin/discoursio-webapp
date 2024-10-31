@@ -1,0 +1,115 @@
+.authorPage {
+  :global(.view-switcher) {
+    margin-top: 0;
+
+    button {
+      font-size: 100%;
+    }
+  }
+
+  .groupControls {
+    @include media-breakpoint-up(md) {
+      margin-bottom: 6rem !important;
+    }
+
+    margin-bottom: 2rem !important;
+    margin-top: 0 !important;
+  }
+}
+
+.authorHeader {
+  @include media-breakpoint-up(lg) {
+    margin-top: -3.2rem;
+  }
+
+  border-bottom: 2px solid var(--default-color);
+  margin-bottom: 2.4rem;
+  margin-top: 1.8rem;
+  padding-bottom: 4rem;
+}
+
+.ratingContainer {
+  font-size:1.5rem;
+  display: inline-flex;
+  vertical-align: top;
+}
+
+.ratingControl {
+  font-size:1.5rem;
+  display: inline-flex;
+  margin-left: 1em;
+  vertical-align: middle;
+}
+
+.additionalControls {
+  @include media-breakpoint-up(md) {
+    display: block;
+    text-align: right;
+  }
+
+  display: none;
+  white-space: nowrap;
+}
+
+.loadingWrapper {
+  position: relative;
+  min-height: 40vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.subscriptions {
+  margin-top: -2em;
+}
+
+.authorContainer {
+  margin-top: 3.2rem;
+}
+
+.comment {
+  background: #efefef;
+}
+
+.longBio {
+  margin-bottom: 0;
+  max-height: 25em;
+  overflow: hidden;
+  padding-bottom: 4em;
+  position: relative;
+  transition:
+    max-height 0.5s,
+    margin-bottom 0s 0.3s;
+
+  &::after {
+    background-image: linear-gradient(to top, #fff, rgb(255 255 255 / 80%), rgb(255 255 255 / 0%));
+    bottom: 0;
+    content: '';
+    display: block;
+    height: 4em;
+    left: 0;
+    position: absolute;
+    width: 100%;
+  }
+}
+
+.longBioExpanded {
+  max-height: 200em;
+  margin-bottom: -2em;
+
+  &::after {
+    display: none;
+  }
+}
+
+.longBioExpandedControl {
+  font-size:1.6rem;
+  border-radius: 1.2rem;
+  display: block;
+  height: auto;
+  padding-bottom: 1.2rem;
+  padding-top: 1.2rem;
+  position: relative;
+  width: 100%;
+  z-index: 1;
+}

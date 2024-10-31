@@ -1,4 +1,4 @@
-import type { Author } from '../../graphql/schema/core.gen'
+import type { Author } from '~/graphql/schema/core.gen'
 
 import { clsx } from 'clsx'
 import { createMemo } from 'solid-js'
@@ -11,7 +11,7 @@ interface AuthorShoutsRating {
 }
 
 export const AuthorShoutsRating = (props: AuthorShoutsRating) => {
-  const isUpvoted = createMemo(() => props.author?.stat?.rating_shouts > 0)
+  const isUpvoted = createMemo(() => (props.author?.stat?.rating_shouts || 0) > 0)
   return (
     <div
       class={clsx(styles.rating, props.class, {

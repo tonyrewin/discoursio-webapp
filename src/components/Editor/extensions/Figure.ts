@@ -12,7 +12,7 @@ export const Figure = Node.create({
   name: 'figure',
   addOptions() {
     return {
-      HTMLAttributes: {}
+      HTMLAttributes: { class: 'figure' }
     }
   },
   group: 'block',
@@ -27,7 +27,7 @@ export const Figure = Node.create({
       'data-type': { default: null }
     }
   },
-
+  // @ts-ignore FIXME: why
   parseHTML() {
     return [
       {
@@ -38,7 +38,7 @@ export const Figure = Node.create({
           }
           const img = node.querySelector('img')
           const iframe = node.querySelector('iframe')
-          let dataType = null
+          let dataType: string | undefined
           if (img) {
             dataType = 'image'
           } else if (iframe) {

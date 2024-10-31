@@ -10,13 +10,8 @@ declare module '@tiptap/core' {
   }
 }
 
-export default Node.create({
+export const ArticleNode = Node.create({
   name: 'article',
-  defaultOptions: {
-    HTMLAttributes: {
-      'data-type': 'incut'
-    }
-  },
   group: 'block',
   content: 'block+',
 
@@ -30,6 +25,12 @@ export default Node.create({
 
   renderHTML({ HTMLAttributes }) {
     return ['article', mergeAttributes(this.options.HTMLAttributes, HTMLAttributes), 0]
+  },
+
+  addOptions() {
+    return {
+      'data-type': 'incut'
+    }
   },
 
   addAttributes() {
@@ -64,3 +65,5 @@ export default Node.create({
     }
   }
 })
+
+export default ArticleNode

@@ -1,7 +1,7 @@
 import { clsx } from 'clsx'
 import { Match, Show, Switch, createEffect, createSignal } from 'solid-js'
 
-import { useLocalize } from '../../../context/localize'
+import { useLocalize } from '~/context/localize'
 import { Button } from '../Button'
 import { Icon } from '../Icon'
 import { Popover } from '../Popover'
@@ -16,6 +16,9 @@ type Props = {
   onVideoDelete?: () => void
   articleView?: boolean
 }
+const watchPattern = /watch=(\w+)/
+const ytPattern = /youtu.be\/(\w+)/
+const vimeoPattern = /vimeo.com\/(\d+)/
 
 export const VideoPlayer = (props: Props) => {
   const { t } = useLocalize()
@@ -27,14 +30,14 @@ export const VideoPlayer = (props: Props) => {
     setIsVimeo(!isYoutube)
     if (isYoutube) {
       if (props.videoUrl.includes('youtube.com')) {
-        const videoIdMatch = props.videoUrl.match(/watch=(\w+)/)
+        const videoIdMatch = props.videoUrl.match(watchPattern)
         setVideoId(videoIdMatch?.[1])
       } else {
-        const videoIdMatch = props.videoUrl.match(/youtu.be\/(\w+)/)
+        const videoIdMatch = props.videoUrl.match(ytPattern)
         setVideoId(videoIdMatch?.[1])
       }
     } else {
-      const videoIdMatch = props.videoUrl.match(/vimeo.com\/(\d+)/)
+      const videoIdMatch = props.videoUrl.match(vimeoPattern)
       setVideoId(videoIdMatch?.[1])
     }
   })
@@ -43,12 +46,12 @@ export const VideoPlayer = (props: Props) => {
     <div class={clsx(styles.VideoPlayer, props.class, { [styles.articleView]: props.articleView })}>
       <Show when={props.onVideoDelete}>
         <Popover content={t('Delete')}>
-          {(triggerRef: (el) => void) => (
+          {(triggerRef: (el: HTMLElement) => void) => (
             <Button
               ref={triggerRef}
               size="S"
               class={styles.deleteAction}
-              onClick={() => props.onVideoDelete()}
+              onClick={() => props.onVideoDelete?.()}
               value={<Icon class={styles.deleteIcon} name="delete" />}
             />
           )}

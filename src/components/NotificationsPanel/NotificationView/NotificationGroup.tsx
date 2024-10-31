@@ -1,15 +1,13 @@
-import { getPagePath, openPage } from '@nanostores/router'
 import { clsx } from 'clsx'
 import { For, Show } from 'solid-js'
 
-import { useLocalize } from '../../../context/localize'
-import { useNotifications } from '../../../context/notifications'
-import { NotificationGroup as Group } from '../../../graphql/schema/notifier.gen'
-import { router, useRouter } from '../../../stores/router'
-import { ArticlePageSearchParams } from '../../Article/FullArticle'
-import { GroupAvatar } from '../../_shared/GroupAvatar'
-import { TimeAgo } from '../../_shared/TimeAgo'
+import { GroupAvatar } from '~/components/_shared/GroupAvatar'
+import { TimeAgo } from '~/components/_shared/TimeAgo'
+import { useLocalize } from '~/context/localize'
+import { useNotifications } from '~/context/notifications'
+import { Author, NotificationGroup as Group } from '~/graphql/schema/core.gen'
 
+import { A, useNavigate, useSearchParams } from '@solidjs/router'
 import styles from './NotificationView.module.scss'
 
 type NotificationGroupProps = {
@@ -39,19 +37,20 @@ const getTitle = (title: string) => {
   return shoutTitle
 }
 
-const reactionsCaption = (threadId: string) =>
-  threadId.includes('::') ? 'Some new replies to your comment' : 'Some new comments to your publication'
+const threadCaption = (threadId: string) =>
+  threadId.includes(':') ? 'Some new replies to your comment' : 'Some new comments to your publication'
 
 export const NotificationGroup = (props: NotificationGroupProps) => {
   const { t, formatTime, formatDate } = useLocalize()
-  const { changeSearchParams } = useRouter<ArticlePageSearchParams>()
+  const navigate = useNavigate()
+  const [, changeSearchParams] = useSearchParams()
   const { hideNotificationsPanel, markSeenThread } = useNotifications()
   const handleClick = (threadId: string) => {
     props.onClick()
 
     markSeenThread(threadId)
     const [slug, commentId] = threadId.split('::')
-    openPage(router, 'article', { slug })
+    navigate(`/${slug}`)
     if (commentId) changeSearchParams({ commentId })
   }
 
@@ -63,27 +62,24 @@ export const NotificationGroup = (props: NotificationGroupProps) => {
   return (
     <>
       <For each={props.notifications}>
-        {(n: Group) => (
+        {(n: Group, _index) => (
           <>
-            {t(reactionsCaption(n.id), { commentsCount: n.reactions.length })}{' '}
+            {t(threadCaption(n.thread), { commentsCount: n.reactions?.length || 0 })}{' '}
             <div
               class={clsx(styles.NotificationView, props.class, { [styles.seen]: n.seen })}
-              onClick={(_) => handleClick(n.id)}
+              onClick={(_) => handleClick(n.thread)}
             >
               <div class={styles.userpic}>
-                <GroupAvatar authors={n.authors} />
+                <GroupAvatar authors={n.authors as Author[]} />
               </div>
               <div>
-                <a href={getPagePath(router, 'article', { slug: n.shout.slug })} onClick={handleLinkClick}>
-                  {getTitle(n.shout.title)}
-                </a>{' '}
+                <A href={`/article/${n.shout?.slug || ''}`} onClick={handleLinkClick}>
+                  {getTitle(n.shout?.title || '')}
+                </A>{' '}
                 {t('from')}{' '}
-                <a
-                  href={getPagePath(router, 'author', { slug: n.authors[0].slug })}
-                  onClick={handleLinkClick}
-                >
-                  {n.authors[0].name}
-                </a>{' '}
+                <A href={`/@${n.authors?.[0]?.slug || ''}`} onClick={handleLinkClick}>
+                  {n.authors?.[0]?.name || ''}
+                </A>{' '}
               </div>
 
               <div class={styles.timeContainer}>
